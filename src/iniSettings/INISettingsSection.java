@@ -11,7 +11,7 @@ import java.util.ArrayList;
  * @author Малякин Кирилл. 15ИТ20.
  */
 public class INISettingsSection {
-    private String sectionName;
+    private final String sectionName;
     private final ArrayList<INISettingsRecord> records = new ArrayList<>();
 
     /**
@@ -30,13 +30,15 @@ public class INISettingsSection {
         return sectionName;
     }
 
-    /**
-     * Метод устанавливает имя секции равным @code(sectionName).
-     * @param sectionName Новое имя данной секции.
-     */
-    public void setSectionName(String sectionName) {
-        this.sectionName = sectionName;
-    }
+// --Commented out by Inspection START (01.07.2018 0:18):
+//    /**
+//     * Метод устанавливает имя секции равным @code(sectionName).
+//     * @param sectionName Новое имя данной секции.
+//     */
+//    public void setSectionName(String sectionName) {
+//        this.sectionName = sectionName;
+//    }
+// --Commented out by Inspection STOP (01.07.2018 0:18)
 
     /**
      * @return Список всех записей

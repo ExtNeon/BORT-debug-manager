@@ -1,8 +1,7 @@
 package iniSettings;
 
-import iniSettings.exceptions.IniSettingsException;
 import iniSettings.exceptions.AlreadyExistsException;
-import iniSettings.exceptions.NotFoundException;
+import iniSettings.exceptions.IniSettingsException;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -37,33 +36,37 @@ public class INISettings {
         sections.add(newSection);
     }
 
-    /**
-     * Метод обновляет секцию в списке, если её имя совпадает с именем секции @code{section}.
-     * В противном случае, секция просто добавляется в список.
-     * @param section Секция, которую необходимо обновить.
-     */
-    public void updateSection(INISettingsSection section) {
-        try {
-            sections.set(sections.indexOf(getSectionByName(section.getSectionName())), section);
-        } catch (NotFoundException e) {
-            sections.add(section);
-        }
-    }
+// --Commented out by Inspection START (01.07.2018 0:18):
+//    /**
+//     * Метод обновляет секцию в списке, если её имя совпадает с именем секции @code{section}.
+//     * В противном случае, секция просто добавляется в список.
+//     * @param section Секция, которую необходимо обновить.
+//     */
+//    public void updateSection(INISettingsSection section) {
+//        try {
+//            sections.set(sections.indexOf(getSectionByName(section.getSectionName())), section);
+//        } catch (NotFoundException e) {
+//            sections.add(section);
+//        }
+//    }
+// --Commented out by Inspection STOP (01.07.2018 0:18)
 
-    /**
-     * Возвращает секцию, найденную по её имени.
-     * @param sectionName Имя секции, которую необходимо найти
-     * @return Секция с заданным именем.
-     * @throws NotFoundException В случае, если секции с подобным именем нет в списке.
-     */
-    private INISettingsSection getSectionByName(String sectionName) throws NotFoundException {
-        for (INISettingsSection selectedSection : sections) {
-            if (selectedSection.getSectionName().equals(sectionName)) {
-                return selectedSection;
-            }
-        }
-        throw new NotFoundException();
-    }
+// --Commented out by Inspection START (01.07.2018 0:21):
+//    /**
+//     * Возвращает секцию, найденную по её имени.
+//     * @param sectionName Имя секции, которую необходимо найти
+//     * @return Секция с заданным именем.
+//     * @throws NotFoundException В случае, если секции с подобным именем нет в списке.
+//     */
+//    private INISettingsSection getSectionByName(String sectionName) throws NotFoundException {
+//        for (INISettingsSection selectedSection : sections) {
+//            if (selectedSection.getSectionName().equals(sectionName)) {
+//                return selectedSection;
+//            }
+//        }
+//        throw new NotFoundException();
+//    }
+// --Commented out by Inspection STOP (01.07.2018 0:21)
 
     /**
      * @return Список секций целиком.

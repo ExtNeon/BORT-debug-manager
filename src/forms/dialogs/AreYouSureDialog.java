@@ -1,7 +1,5 @@
 package forms.dialogs;
 
-import com.sun.jnlp.ApiDialog;
-
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionListener;

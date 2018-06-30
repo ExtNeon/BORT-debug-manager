@@ -24,14 +24,14 @@ import java.util.ArrayList;
  */
 public class BORT_connection implements SerialPortEventListener, Closeable {
 
+    // --Commented out by Inspection (01.07.2018 0:21):private boolean responsesStackUpdated = false;
+    private final ArrayList<BORT_response> responsesStack = new ArrayList<>();
+    private final SerialPort serialPort;
+    private final StringBuilder receivingBuf = new StringBuilder();
     /*
     ********Стандартные мелодии********
      */
     private boolean isConnected = false;
-    private boolean responsesStackUpdated = false;
-    private final ArrayList<BORT_response> responsesStack = new ArrayList<>();
-    private final SerialPort serialPort;
-    private final StringBuilder receivingBuf = new StringBuilder();
 
     /**
      * Конструктор. Открывает COM - порт на скорости 115200 бод, подключается и ждёт ответа от устройства.
@@ -101,24 +101,26 @@ public class BORT_connection implements SerialPortEventListener, Closeable {
             isConnected = true;
         }
         responsesStack.add(new BORT_response(receivedStr));
-        responsesStackUpdated = true;
+        //responsesStackUpdated = true;
     }
 
     public ArrayList<BORT_response> getResponsesStack() {
         return responsesStack;
     }
 
-    public boolean isResponsesStackUpdated(boolean resetFlag) {
-        boolean flag_copy = responsesStackUpdated;
-        if (resetFlag) {
-            responsesStackUpdated = false;
-        }
-        return flag_copy;
-    }
+// --Commented out by Inspection START (01.07.2018 0:18):
+//    public boolean isResponsesStackUpdated(boolean resetFlag) {
+//        boolean flag_copy = responsesStackUpdated;
+//        if (resetFlag) {
+//            responsesStackUpdated = false;
+//        }
+//        return flag_copy;
+//    }
+// --Commented out by Inspection STOP (01.07.2018 0:18)
 
     public void clearResponsesStack() {
         responsesStack.clear();
-        responsesStackUpdated = false;
+        //responsesStackUpdated = false;
     }
 
     /**

@@ -15,6 +15,7 @@ import java.awt.event.ActionListener;
  * Created by Кирилл on 30.06.2018.
  */
 public class MainGUIForm extends JFrame implements ChangeListener, ActionListener{
+    private final ActionListener listener;
     private JLabel MainCaption;
     private JLabel statusLabel;
     private JButton RestartModuleButton;
@@ -31,7 +32,6 @@ public class MainGUIForm extends JFrame implements ChangeListener, ActionListene
     private JButton saveSettingsToMemoryButton;
     private JButton resetSettingButton;
     private JProgressBar progressBar;
-    private final ActionListener listener;
     private INISettingsSection paramsList = null;
 
     public MainGUIForm(Dimension size, ActionListener listener) {
@@ -47,7 +47,7 @@ public class MainGUIForm extends JFrame implements ChangeListener, ActionListene
         importSettingsButton.addActionListener(listener);
         exportSettingsButton.addActionListener(listener);
         tabbedPane1.addChangeListener(this);
-        this.setDefaultCloseOperation(EXIT_ON_CLOSE);
+        this.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         selectedParameterComboBox.addActionListener(this);
     }
 

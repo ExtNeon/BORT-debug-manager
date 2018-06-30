@@ -21,16 +21,14 @@ import java.io.File;
 import java.io.IOException;
 import java.rmi.UnexpectedException;
 import java.security.InvalidParameterException;
-import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.InputMismatchException;
-import java.util.Scanner;
 import java.util.concurrent.TimeoutException;
 
 /**
  * Created by Кирилл on 10.06.2018.
  */
+
 @SuppressWarnings("FieldCanBeLocal")
 class BORT_debug_manager implements ActionListener {
 
@@ -228,7 +226,7 @@ class BORT_debug_manager implements ActionListener {
 
     private void exportModuleSettingsToFile() throws InterruptedException {
         try {
-            String gettedFileName = "";
+            String gettedFileName;
             INISettings readedParameters = readAllParametersFromModule(true);
             JFileChooser fileopen = new JFileChooser();
             fileopen.setCurrentDirectory(new File("."));
@@ -341,17 +339,19 @@ class BORT_debug_manager implements ActionListener {
         // } while (!success);
     }
 
-    private void readParameter(int paramId) throws TimeoutException {
-        connection.send("$3:" + paramId + '=');
-        mainGUIForm.updateStatus("Читаем значение параметра...");
-        BORT_responseType waitingResponseTypes[] = {BORT_responseType.ERR_WRONG_PARAM_NAME, BORT_responseType.PARAM_RW_SUCCESS};
-        BORT_response gettedResponse = waitForIncomingResponse(waitingResponseTypes, RESPONSE_WAIT_TIMEOUT);
-        if (gettedResponse.getResponseType() != BORT_responseType.ERR_WRONG_PARAM_NAME && gettedResponse.getResponseParams().getRecords().size() > 0) {
-            mainGUIForm.updateStatus("Ответ получен. Текущее значение параметра: \"" + gettedResponse.getResponseParams().getRecords().get(0).getValue() + '"');
-        } else {
-            mainGUIForm.updateErrorStatus(gettedResponse.toString());
-        }
-    }
+// --Commented out by Inspection START (01.07.2018 0:18):
+//    private void readParameter(int paramId) throws TimeoutException {
+//        connection.send("$3:" + paramId + '=');
+//        mainGUIForm.updateStatus("Читаем значение параметра...");
+//        BORT_responseType waitingResponseTypes[] = {BORT_responseType.ERR_WRONG_PARAM_NAME, BORT_responseType.PARAM_RW_SUCCESS};
+//        BORT_response gettedResponse = waitForIncomingResponse(waitingResponseTypes, RESPONSE_WAIT_TIMEOUT);
+//        if (gettedResponse.getResponseType() != BORT_responseType.ERR_WRONG_PARAM_NAME && gettedResponse.getResponseParams().getRecords().size() > 0) {
+//            mainGUIForm.updateStatus("Ответ получен. Текущее значение параметра: \"" + gettedResponse.getResponseParams().getRecords().get(0).getValue() + '"');
+//        } else {
+//            mainGUIForm.updateErrorStatus(gettedResponse.toString());
+//        }
+//    }
+// --Commented out by Inspection STOP (01.07.2018 0:18)
 
     private void writeParameter(int paramId, String value) throws TimeoutException {
         connection.send("$2:" + paramId + '=' + value);
@@ -375,12 +375,14 @@ class BORT_debug_manager implements ActionListener {
         throw new NotFoundException();
     }
 
-    private void printListOfAvailableParameters() {
-        mainGUIForm.updateStatus("Список доступных параметров: ");
-        for (Primitive_KeyValueRecord currentParam : MODULE_PARAMETERS_LIST) {
-            mainGUIForm.updateStatus(currentParam.value);
-        }
-    }
+// --Commented out by Inspection START (01.07.2018 0:18):
+//    private void printListOfAvailableParameters() {
+//        mainGUIForm.updateStatus("Список доступных параметров: ");
+//        for (Primitive_KeyValueRecord currentParam : MODULE_PARAMETERS_LIST) {
+//            mainGUIForm.updateStatus(currentParam.value);
+//        }
+//    }
+// --Commented out by Inspection STOP (01.07.2018 0:18)
 
     private void importParamsIntoModule() throws InterruptedException, TimeoutException {
         String gettedFileName;
@@ -443,27 +445,29 @@ class BORT_debug_manager implements ActionListener {
         mainGUIForm.updateStatus("Запись параметров завершена " + (allWritedSucessfully ? "успешно" : "с ошибками"));
     }
 
-    /**
-     * Возвращает строку ASCII - графики, представляющую собой progressBar.
-     *
-     * @param percents процентное соотношение заполненной части шкалы к пустой.
-     * @return ASCII - строка, представляющая собой progressBar.
-     */
-    private String getPercentLine(int percents, int length) {
-        StringBuilder temp = new StringBuilder("[");
-        percents /= 100. / length;
-        for (int i = 1; i <= length; i++) {
-            if (i <= percents) {
-                temp.append('=');
-            } else {
-                temp.append(' ');
-            }
-        }
-        temp.append("] | ");
-        temp.append(new DecimalFormat("#0.00").format(percents * 100. / length));
-        temp.append('%');
-        return temp.toString();
-    }
+// --Commented out by Inspection START (01.07.2018 0:18):
+//    /**
+//     * Возвращает строку ASCII - графики, представляющую собой progressBar.
+//     *
+//     * @param percents процентное соотношение заполненной части шкалы к пустой.
+//     * @return ASCII - строка, представляющая собой progressBar.
+//     */
+//    private String getPercentLine(int percents, int length) {
+//        StringBuilder temp = new StringBuilder("[");
+//        percents /= 100. / length;
+//        for (int i = 1; i <= length; i++) {
+//            if (i <= percents) {
+//                temp.append('=');
+//            } else {
+//                temp.append(' ');
+//            }
+//        }
+//        temp.append("] | ");
+//        temp.append(new DecimalFormat("#0.00").format(percents * 100. / length));
+//        temp.append('%');
+//        return temp.toString();
+//    }
+// --Commented out by Inspection STOP (01.07.2018 0:18)
 
 
     private INISettings readAllParametersFromModule(boolean notifyIfNotSucessful) throws InterruptedException {
@@ -597,33 +601,37 @@ class BORT_debug_manager implements ActionListener {
         }
     }
 
-    /**
-     * Выводит пользователю пояняющее сообщение, и возвращает введённую им строку.
-     *
-     * @param message Сообщение, которое будет выведено.
-     * @return Введённая пользователем строка
-     */
-    public String getEnteredString(String message) {
-        System.out.print(message);
-        return new Scanner(System.in).nextLine();
-    }
+// --Commented out by Inspection START (01.07.2018 0:18):
+//    /**
+//     * Выводит пользователю пояняющее сообщение, и возвращает введённую им строку.
+//     *
+//     * @param message Сообщение, которое будет выведено.
+//     * @return Введённая пользователем строка
+//     */
+//    public String getEnteredString(String message) {
+//        System.out.print(message);
+//        return new Scanner(System.in).nextLine();
+//    }
+// --Commented out by Inspection STOP (01.07.2018 0:18)
 
-    /**
-     * Выводит пользователю пояняющее сообщение, и возвращает введённое им целое число.
-     *
-     * @param message Сообщение, которое будет выведено.
-     * @return Введённое пользователем число.
-     */
-    public int getEnteredIntegerNumber(String message) {
-        System.out.print(message);
-        for (; ; ) {
-            try {
-                return new Scanner(System.in).nextInt();
-            } catch (InputMismatchException e) {
-                mainGUIForm.updateErrorStatus("Ошибка ввода, повторите попытку...");
-            }
-        }
-    }
+// --Commented out by Inspection START (01.07.2018 0:18):
+//    /**
+//     * Выводит пользователю пояняющее сообщение, и возвращает введённое им целое число.
+//     *
+//     * @param message Сообщение, которое будет выведено.
+//     * @return Введённое пользователем число.
+//     */
+//    public int getEnteredIntegerNumber(String message) {
+//        System.out.print(message);
+//        for (; ; ) {
+//            try {
+//                return new Scanner(System.in).nextInt();
+//            } catch (InputMismatchException e) {
+//                mainGUIForm.updateErrorStatus("Ошибка ввода, повторите попытку...");
+//            }
+//        }
+//    }
+// --Commented out by Inspection STOP (01.07.2018 0:18)
 
     /**
      * Invoked when an action occurs.

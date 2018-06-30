@@ -2,7 +2,6 @@ package forms.dialogs;
 
 import com.sun.jnlp.ApiDialog;
 
-import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 

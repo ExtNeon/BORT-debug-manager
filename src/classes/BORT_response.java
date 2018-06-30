@@ -15,8 +15,8 @@ import java.util.ArrayList;
  * Created by Кирилл on 10.06.2018.
  */
 public class BORT_response {
-    private BORT_responseType responseType;
     private final INISettingsSection responseParams = new INISettingsSection("BORT_RESPONSE");
+    private BORT_responseType responseType;
 
     public BORT_response(String responseStr) throws InterpretationException {
         if (!responseStr.contains("!") || !responseStr.contains(":")) {
@@ -53,7 +53,7 @@ public class BORT_response {
     }
 
     private void addParamsIntoSection(ArrayList<String> input) throws RecordParsingException {
-        ArrayList<INISettingsRecord> result = new ArrayList<>(input.size());
+        //ArrayList<INISettingsRecord> result = new ArrayList<>(input.size());
         for (String currentParam : input) {
             if (currentParam.contains("=")) {
                 try {
@@ -63,6 +63,7 @@ public class BORT_response {
         }
     }
 
+    @SuppressWarnings("SameParameterValue")
     private ArrayList<String> splitText(String text, String delimiter) {
         ArrayList<String> lines = new ArrayList<>();
         StringBuilder builder = new StringBuilder(text);
