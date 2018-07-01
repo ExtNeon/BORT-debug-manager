@@ -7,6 +7,7 @@ import jssc.SerialPortEventListener;
 import jssc.SerialPortException;
 
 import java.io.Closeable;
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 
 /**
@@ -56,11 +57,12 @@ public class BORT_connection implements SerialPortEventListener, Closeable {
      * @return Строка, состоящая из символов, которые представляют каждый отдельный элемент.
      */
     private static String convertByteArrayToANSIStr(byte[] buf) {
-        StringBuilder builder = new StringBuilder();
-        for (byte readedByte : buf) {
-            builder.append((char) readedByte);
+        try {
+            return new String(buf, "cp1251");
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
         }
-        return builder.toString();
+        return "";
     }
 
     /**
