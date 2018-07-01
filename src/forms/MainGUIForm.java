@@ -32,6 +32,7 @@ public class MainGUIForm extends JFrame implements ChangeListener, ActionListene
     private JButton saveSettingsToMemoryButton;
     private JButton resetSettingButton;
     private JProgressBar progressBar;
+    private JCheckBox holdConnectionCheckBox;
     private INISettingsSection paramsList = null;
 
     public MainGUIForm(Dimension size, ActionListener listener) {
@@ -46,6 +47,7 @@ public class MainGUIForm extends JFrame implements ChangeListener, ActionListene
         resetSettingButton.addActionListener(listener);
         importSettingsButton.addActionListener(listener);
         exportSettingsButton.addActionListener(listener);
+        holdConnectionCheckBox.addActionListener(listener);
         tabbedPane1.addChangeListener(this);
         this.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         selectedParameterComboBox.addActionListener(this);
@@ -68,6 +70,10 @@ public class MainGUIForm extends JFrame implements ChangeListener, ActionListene
         logConsoleTextArea.select(logConsoleTextArea.getText().length() - newStatus.length(), logConsoleTextArea.getText().length());
         logConsoleTextArea.setSelectedTextColor(new Color(202, 0, 0));
         logConsoleTextArea.select(logConsoleTextArea.getText().length(),logConsoleTextArea.getText().length());
+    }
+
+    public JCheckBox getHoldConnectionCheckBox() {
+        return holdConnectionCheckBox;
     }
 
     public void updateStatistics(String newStatistics) {

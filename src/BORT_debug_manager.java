@@ -25,9 +25,6 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.concurrent.TimeoutException;
 
-/**
- * Created by Кирилл on 10.06.2018.
- */
 
 @SuppressWarnings("FieldCanBeLocal")
 class BORT_debug_manager implements ActionListener {
@@ -75,10 +72,12 @@ class BORT_debug_manager implements ActionListener {
         mainGUIForm = new MainGUIForm(new Dimension(800, 500), this);
         connection = findAndConnectToTheModule();
         checkRTCparams();
-        while (connection.getSerialPort().isOpened()) {
-            if (connectionErrorsCounter >= RECONNECT_ERRORS_THRESHOLD) {
+        while (true) {
+            if (connectionErrorsCounter >= RECONNECT_ERRORS_THRESHOLD || connection == null || !connection.getSerialPort().isOpened()) {
                 mainGUIForm.updateStatus("Соединение потеряно. Переподключаемся...");
-                connection.close();
+                if (connection != null) {
+                    connection.close();
+                }
                 connection = findAndConnectToTheModule();
                 connectionErrorsCounter = 0;
                 checkRTCparams();
@@ -126,6 +125,9 @@ class BORT_debug_manager implements ActionListener {
             case "update paramslist":
                 updateParamsList();
                 break;
+            case "hold connection":
+                disconnectAndWaitForClickOnHoldConnectionCheckbox();
+                break;
             case "reconnect":
                 connection.close();
                 connection = findAndConnectToTheModule();
@@ -138,7 +140,7 @@ class BORT_debug_manager implements ActionListener {
     private void updateParamsList() throws InterruptedException {
         mainGUIForm.getParametersListPane().setEnabled(false);
         mainGUIForm.getSelectedParameterComboBox().setEnabled(false);
-        mainGUIForm.setParamsList(readAllParametersFromModule(false).getSections().get(0));
+        mainGUIForm.setParamsList(readAllParametersFromModule(false));
 
         /*mainGUIForm.getTable1().removeAll();
         mainGUIForm.getTable1().addColumn(new TableColumn());*/
@@ -155,6 +157,16 @@ class BORT_debug_manager implements ActionListener {
             connectionErrorsCounter++;
         }
         mainGUIForm.updateStatus("Время синхронизировано");
+    }
+
+    private void disconnectAndWaitForClickOnHoldConnectionCheckbox() {
+        connection.close();
+        mainGUIForm.updateStatus("Подключение разорвано");
+        while (!mainGUIForm.getHoldConnectionCheckBox().isSelected()) {
+            delayMs(100);
+        }
+        //actionEvent = null;
+        connection = null;
     }
 
     /*private void runMenu() {
@@ -227,7 +239,8 @@ class BORT_debug_manager implements ActionListener {
     private void exportModuleSettingsToFile() throws InterruptedException {
         try {
             String gettedFileName;
-            INISettings readedParameters = readAllParametersFromModule(true);
+            INISettings readedParameters = new INISettings();
+            readedParameters.addSection(readAllParametersFromModule(true));
             JFileChooser fileopen = new JFileChooser();
             fileopen.setCurrentDirectory(new File("."));
             int ret = fileopen.showDialog(null, "Выбрать файл для сохранения настроек");
@@ -248,6 +261,7 @@ class BORT_debug_manager implements ActionListener {
             mainGUIForm.updateErrorStatus(e.getMessage());
         } catch (IOException e) {
             mainGUIForm.updateErrorStatus("Ошибка ввода-вывода во время записи в файл: " + e.getMessage());
+        } catch (AlreadyExistsException ignored) {
         }
     }
 
@@ -402,7 +416,7 @@ class BORT_debug_manager implements ActionListener {
         INISettings loadedSettings = new INISettings();
         try {
             loadedSettings.loadFromFile(gettedFileName);
-            writeAllParametersIntoModule(loadedSettings.getSections().get(0));
+            writeAllParametersIntoModule(loadedSettings.getSectionByName("BORT_PARAMS"));
             saveSettingsToEEPROM();
             restartModule();
             mainGUIForm.updateStatus("Операция выполнена");
@@ -415,6 +429,11 @@ class BORT_debug_manager implements ActionListener {
         }
     }
 
+    /**
+     * Записывает все параметры в модуль из секции настроек parameters
+     *
+     * @param parameters Настройки, которые нужно записать в модуль
+     */
     private void writeAllParametersIntoModule(INISettingsSection parameters) {
         mainGUIForm.updateStatus("Записываем настройки в модуль...");
         //System.out.print(getPercentLine(0, 60));
@@ -445,33 +464,16 @@ class BORT_debug_manager implements ActionListener {
         mainGUIForm.updateStatus("Запись параметров завершена " + (allWritedSucessfully ? "успешно" : "с ошибками"));
     }
 
-// --Commented out by Inspection START (01.07.2018 0:18):
-//    /**
-//     * Возвращает строку ASCII - графики, представляющую собой progressBar.
-//     *
-//     * @param percents процентное соотношение заполненной части шкалы к пустой.
-//     * @return ASCII - строка, представляющая собой progressBar.
-//     */
-//    private String getPercentLine(int percents, int length) {
-//        StringBuilder temp = new StringBuilder("[");
-//        percents /= 100. / length;
-//        for (int i = 1; i <= length; i++) {
-//            if (i <= percents) {
-//                temp.append('=');
-//            } else {
-//                temp.append(' ');
-//            }
-//        }
-//        temp.append("] | ");
-//        temp.append(new DecimalFormat("#0.00").format(percents * 100. / length));
-//        temp.append('%');
-//        return temp.toString();
-//    }
-// --Commented out by Inspection STOP (01.07.2018 0:18)
-
-
-    private INISettings readAllParametersFromModule(boolean notifyIfNotSucessful) throws InterruptedException {
-        INISettings result = new INISettings();
+    /**
+     * Запрашивает все параметры из модуля и возвращает их в виде экземпляра INISettingsSection.
+     * В случае, если чтение параметров из модуля не было успешным, и параметр notifyIfNotSucessful был true,
+     * спрашивает пользователя, хочет ли он продолжить.
+     *
+     * @param notifyIfNotSucessful Спрашивать ли пользователя о продолжении операции, если она не была успешна.
+     * @return Список параметров в виде INISettingsSection
+     * @throws InterruptedException В случае, если пользователь отказался продолжать выполнение операции.
+     */
+    private INISettingsSection readAllParametersFromModule(boolean notifyIfNotSucessful) throws InterruptedException {
         INISettingsSection readedParamsList = new INISettingsSection("BORT_PARAMS");
         mainGUIForm.updateStatus("Запрашиваем параметры...");
         boolean allIsSuccessful = true;
@@ -500,7 +502,6 @@ class BORT_debug_manager implements ActionListener {
                     mainGUIForm.updateStatus(currentParam.value + " - ошибка. Таймаут.");
                 }
             }
-            result.addSection(readedParamsList);
         } catch (AlreadyExistsException ignored) {
         }
         if (!allIsSuccessful && notifyIfNotSucessful) {
@@ -509,9 +510,15 @@ class BORT_debug_manager implements ActionListener {
             }
         }
         mainGUIForm.updateStatus("Все параметры были получены");
-        return result;
+        return readedParamsList;
     }
 
+    /**
+     * Запрашивает у пользователя разрешение на сброс энергонезависимой памяти модуля, и в случае успеха, отправляет запрос на сброс на модуль.
+     * Ждёт ответа от модуля в течение RESPONSE_WAIT_TIMEOUT миллисекунд.
+     * @throws InterruptedException В случае, если пользователь отказался сбрасывать память контроллера.
+     * @throws TimeoutException В случае, если ответ от модуля не был получен в течение RESPONSE_WAIT_TIMEOUT миллисекунд.
+     */
     private void reset_EEPROM() throws InterruptedException, TimeoutException {
         if (new AreYouSureDialogProcessor().showDialog("ВЫ УВЕРЕНЫ В ТОМ, ЧТО ХОТИТЕ СБРОСИТЬ ВСЕ СОХРАНЁННЫЕ ДАННЫЕ И НАСТРОЙКИ МОДУЛЯ?\n" +
                 "ЭТО ДЕЙСТВИЕ НЕВОЗМОЖНО ОТМЕНИТЬ!!!") != ApiDialog.DialogResult.OK) {
@@ -525,6 +532,10 @@ class BORT_debug_manager implements ActionListener {
         restartModule();
     }
 
+    /**
+     * Посылает на модуль запрос о сохранении параметров в энергонезависимую память, и ждёт ответа в течение RESPONSE_WAIT_TIMEOUT.
+     * @throws TimeoutException В случае, если ответ не был получен в течение RESPONSE_WAIT_TIMEOUT.
+     */
     private void saveSettingsToEEPROM() throws TimeoutException {
         mainGUIForm.updateStatus("Отправляем запрос на сохранение...");
         connection.send("$4:");
@@ -533,6 +544,11 @@ class BORT_debug_manager implements ActionListener {
         mainGUIForm.updateStatus(gettedResponse.toString());
     }
 
+    /**
+     * Посылает на модуль запрос о получении статистики, и в течение RESPONSE_WAIT_TIMEOUT миллисекунд ждёт от него ответа.
+     * При получении ответа, обновляет информацию в пользовательском интерфейсе
+     * @throws TimeoutException В случае, если модуль не ответил вовремя.
+     */
     private void requestStatistics() throws TimeoutException {
         connection.send("$7:");
         //mainGUIForm.updateStatus("Запрашиваем статистику...");
@@ -541,6 +557,13 @@ class BORT_debug_manager implements ActionListener {
         mainGUIForm.updateStatistics(gettedResponse.toString());
     }
 
+    /**
+     * Метод ожидает получение определённого ответа от модуля в течение некоторого времени
+     * @param responseTypes Типы ответа от модуля, которые должны быть приняты. Все остальные типы будут проигнорированы
+     * @param timeout Максимальное время ожидания ответа. По истечении этого времени выбрасывается исключение TimeoutException
+     * @return Ответ от модуля, который принадлежит одному из типов в массиве responseTypes
+     * @throws TimeoutException В случае, если ответ от модуля не пришёл в течение timeout миллисекунд
+     */
     private BORT_response waitForIncomingResponse(BORT_responseType responseTypes[], long timeout) throws TimeoutException {
         connection.clearResponsesStack();
         long capturedSysTime = System.currentTimeMillis();
@@ -601,42 +624,10 @@ class BORT_debug_manager implements ActionListener {
         }
     }
 
-// --Commented out by Inspection START (01.07.2018 0:18):
-//    /**
-//     * Выводит пользователю пояняющее сообщение, и возвращает введённую им строку.
-//     *
-//     * @param message Сообщение, которое будет выведено.
-//     * @return Введённая пользователем строка
-//     */
-//    public String getEnteredString(String message) {
-//        System.out.print(message);
-//        return new Scanner(System.in).nextLine();
-//    }
-// --Commented out by Inspection STOP (01.07.2018 0:18)
-
-// --Commented out by Inspection START (01.07.2018 0:18):
-//    /**
-//     * Выводит пользователю пояняющее сообщение, и возвращает введённое им целое число.
-//     *
-//     * @param message Сообщение, которое будет выведено.
-//     * @return Введённое пользователем число.
-//     */
-//    public int getEnteredIntegerNumber(String message) {
-//        System.out.print(message);
-//        for (; ; ) {
-//            try {
-//                return new Scanner(System.in).nextInt();
-//            } catch (InputMismatchException e) {
-//                mainGUIForm.updateErrorStatus("Ошибка ввода, повторите попытку...");
-//            }
-//        }
-//    }
-// --Commented out by Inspection STOP (01.07.2018 0:18)
-
     /**
-     * Invoked when an action occurs.
+     * Вызывается, когда пользователь производит определённые действия в интерфейсе.
      *
-     * @param actionEvent
+     * @param actionEvent Событие, вызванное пользовательским интерфейсом
      */
     @Override
     public void actionPerformed(ActionEvent actionEvent) {
