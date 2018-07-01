@@ -8,7 +8,6 @@ import iniSettings.exceptions.IniSettingsException;
 import iniSettings.exceptions.NotFoundException;
 import iniSettings.exceptions.RecordParsingException;
 
-import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 
 /**
@@ -26,7 +25,9 @@ public class BORT_response {
         try {
             responseCode = Integer.valueOf(responseStr.substring(responseStr.indexOf('!') + 1, responseStr.indexOf(':')));
         } catch (NumberFormatException e) {
-            throw new InterpretationException("Response code extraction failure");
+            throw new InterpretationException("Response code extraction failure - wrong number format");
+        } catch (StringIndexOutOfBoundsException e) {
+            throw new InterpretationException("Response code extraction failure - invalid index");
         }
         responseType = BORT_responseType.getResponseTypeFromNumericalCode(responseCode);
         try {
@@ -126,12 +127,18 @@ public class BORT_response {
                     result.append("Количество ошибок связи по I2C: "); result.append(responseParams.getFieldByKey("CER").getValue()); result.append('\n');
                     result.append("Количество накопленных оборотов коленчатого вала: "); result.append(responseParams.getFieldByKey("MC").getValue()); result.append('\n');
                     result.append("Количество мото-часов: "); result.append(responseParams.getFieldByKey("MHR").getValue()); result.append('\n');
-                    result.append("Текущая надпись в строке статуса: "); result.append(new String(responseParams.getFieldByKey("SBC").getValue().getBytes("Cp1251"), "UTF-8")); result.append('\n');
+                    result.append("Текущая надпись в строке статуса: ");
+                    result.append(responseParams.getFieldByKey("SBC").getValue());
+                    result.append('\n');
                     result.append("Уровень топлива: "); result.append(responseParams.getFieldByKey("FL").getValue()); result.append(" л.\n");
-                    result.append("Температура двигателя: "); result.append(responseParams.getFieldByKey("TP").getValue()); result.append(" °C");
+                    result.append("Температура двигателя: ");
+                    result.append(responseParams.getFieldByKey("TP").getValue());
+                    result.append(" °C\n");
+                    result.append("Время работы с момента включения: ");
+                    result.append(responseParams.getFieldByKey("ST").getValue());
+                    result.append(" секунд");
                 } catch (NotFoundException e) {
                     return "Ошибка во время обработки статистики.";
-                } catch (UnsupportedEncodingException ignored) {
                 }
                 return "Текущая статистика:\n" + result;
             default:

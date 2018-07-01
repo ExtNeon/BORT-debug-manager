@@ -2,6 +2,7 @@ package iniSettings;
 
 import iniSettings.exceptions.AlreadyExistsException;
 import iniSettings.exceptions.IniSettingsException;
+import iniSettings.exceptions.NotFoundException;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -51,29 +52,28 @@ public class INISettings {
 //    }
 // --Commented out by Inspection STOP (01.07.2018 0:18)
 
-// --Commented out by Inspection START (01.07.2018 0:21):
-//    /**
-//     * Возвращает секцию, найденную по её имени.
-//     * @param sectionName Имя секции, которую необходимо найти
-//     * @return Секция с заданным именем.
-//     * @throws NotFoundException В случае, если секции с подобным именем нет в списке.
-//     */
-//    private INISettingsSection getSectionByName(String sectionName) throws NotFoundException {
-//        for (INISettingsSection selectedSection : sections) {
-//            if (selectedSection.getSectionName().equals(sectionName)) {
-//                return selectedSection;
-//            }
-//        }
-//        throw new NotFoundException();
-//    }
-// --Commented out by Inspection STOP (01.07.2018 0:21)
-
     /**
-     * @return Список секций целиком.
+     * Возвращает секцию, найденную по её имени.
+     *
+     * @param sectionName Имя секции, которую необходимо найти
+     * @return Секция с заданным именем.
+     * @throws NotFoundException В случае, если секции с подобным именем нет в списке.
      */
-    public ArrayList<INISettingsSection> getSections() {
-        return sections;
+    public INISettingsSection getSectionByName(String sectionName) throws NotFoundException {
+        for (INISettingsSection selectedSection : sections) {
+            if (selectedSection.getSectionName().equals(sectionName)) {
+                return selectedSection;
+            }
+        }
+        throw new NotFoundException();
     }
+
+//    /**
+//     * @return Список секций целиком.
+//     */
+//    public ArrayList<INISettingsSection> getSections() {
+//        return sections;
+//    }
 
     /**
      * Метод экспортирует список секций в файл @code{filename} в соответствие с форматом INI. Файл перезаписывается.
