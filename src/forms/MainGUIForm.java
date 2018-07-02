@@ -14,7 +14,8 @@ import java.awt.event.ActionListener;
 /**
  * Created by Кирилл on 30.06.2018.
  */
-public class MainGUIForm extends JFrame implements ChangeListener, ActionListener{
+public class MainGUIForm extends JFrame implements ChangeListener, ActionListener {
+    private final static int MAX_DEBUG_CONSOLE_TEXT_LENGTH = 30000;
     private final ActionListener listener;
     private JLabel MainCaption;
     private JLabel statusLabel;
@@ -33,6 +34,9 @@ public class MainGUIForm extends JFrame implements ChangeListener, ActionListene
     private JButton resetSettingButton;
     private JProgressBar progressBar;
     private JCheckBox holdConnectionCheckBox;
+    private JTextArea debugConsoleTextArea;
+    private JLabel debugStatusLabel;
+    private JButton refreshSettingsButton;
     private INISettingsSection paramsList = null;
 
     public MainGUIForm(Dimension size, ActionListener listener) {
@@ -48,6 +52,7 @@ public class MainGUIForm extends JFrame implements ChangeListener, ActionListene
         importSettingsButton.addActionListener(listener);
         exportSettingsButton.addActionListener(listener);
         holdConnectionCheckBox.addActionListener(listener);
+        refreshSettingsButton.addActionListener(listener);
         tabbedPane1.addChangeListener(this);
         this.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         selectedParameterComboBox.addActionListener(this);
@@ -55,21 +60,21 @@ public class MainGUIForm extends JFrame implements ChangeListener, ActionListene
 
     public void updateStatus(String newStatus) {
         statusLabel.setText(newStatus);
-        statusLabel.setForeground(new Color(0,0,0));
+        statusLabel.setForeground(new Color(0, 0, 0));
 
         logConsoleTextArea.append(newStatus + '\n');
         logConsoleTextArea.select(logConsoleTextArea.getText().length() - newStatus.length(), logConsoleTextArea.getText().length());
-        logConsoleTextArea.setSelectedTextColor(new Color(0,0,0));
-        logConsoleTextArea.select(logConsoleTextArea.getText().length(),logConsoleTextArea.getText().length());
+        logConsoleTextArea.setSelectedTextColor(new Color(0, 0, 0));
+        logConsoleTextArea.select(logConsoleTextArea.getText().length(), logConsoleTextArea.getText().length());
     }
 
     public void updateErrorStatus(String newStatus) {
         statusLabel.setText(newStatus);
-        statusLabel.setForeground(new Color(202, 0,0));
+        statusLabel.setForeground(new Color(202, 0, 0));
         logConsoleTextArea.append(newStatus + '\n');
         logConsoleTextArea.select(logConsoleTextArea.getText().length() - newStatus.length(), logConsoleTextArea.getText().length());
         logConsoleTextArea.setSelectedTextColor(new Color(202, 0, 0));
-        logConsoleTextArea.select(logConsoleTextArea.getText().length(),logConsoleTextArea.getText().length());
+        logConsoleTextArea.select(logConsoleTextArea.getText().length(), logConsoleTextArea.getText().length());
     }
 
     public JCheckBox getHoldConnectionCheckBox() {
@@ -82,6 +87,14 @@ public class MainGUIForm extends JFrame implements ChangeListener, ActionListene
 
     public JProgressBar getProgressBar() {
         return progressBar;
+    }
+
+    public void updateDebugStatusBar(String info) {
+        if (debugConsoleTextArea.getText().length() > MAX_DEBUG_CONSOLE_TEXT_LENGTH) {
+            debugConsoleTextArea.setText("CLEARED");
+        }
+        debugConsoleTextArea.append(info + "\n");
+        debugStatusLabel.setText(info);
     }
 
     public void setParamsList(INISettingsSection paramsList) {
@@ -128,7 +141,7 @@ public class MainGUIForm extends JFrame implements ChangeListener, ActionListene
     public void actionPerformed(ActionEvent e) {
         if (e.getSource() == selectedParameterComboBox) {
             try {
-                selectedParamNewValueField.setText(paramsList.getFieldByKey((String)selectedParameterComboBox.getSelectedItem()).getValue());
+                selectedParamNewValueField.setText(paramsList.getFieldByKey((String) selectedParameterComboBox.getSelectedItem()).getValue());
             } catch (NotFoundException ignored) {
                 //updateErrorStatus("Не удалось найти параметр с таким именем");
             }

@@ -60,7 +60,8 @@ public class BORT_response {
             if (currentParam.contains("=")) {
                 try {
                     responseParams.addField(new INISettingsRecord(currentParam));
-                } catch (AlreadyExistsException ignored) {}
+                } catch (AlreadyExistsException ignored) {
+                }
             }
         }
     }
@@ -82,6 +83,12 @@ public class BORT_response {
         switch (responseType) {
             case ECHO:
                 return "ECHO: " + responseParams;
+            case DEBUG_INFORMATION:
+                try {
+                    return "Debug information: " + responseParams.getFieldByKey("DBG").getValue();
+                } catch (NotFoundException ignored) {
+                    return "Command params error";
+                }
             case PARAM_RW_SUCCESS:
                 return "Команда чтения/записи обработана успешно";
             case EEPROM_RESET_SUCCESS:
@@ -115,23 +122,51 @@ public class BORT_response {
             case INFO_STATISTICS:
                 StringBuilder result = new StringBuilder();
                 try {
-                    result.append("Напряжение в бортовой линии: "); result.append(responseParams.getFieldByKey("VM_L").getValue()); result.append(" вольт\n");
-                    result.append("Напряжение на датчике температуры: "); result.append(responseParams.getFieldByKey("VM_T").getValue()); result.append(" вольт\n");
-                    result.append("Напряжение на датчике уровня топлива: "); result.append(responseParams.getFieldByKey("VM_F").getValue()); result.append(" вольт\n");
-                    result.append("Показания тахометра: "); result.append(responseParams.getFieldByKey("RPM").getValue()); result.append(" об/мин\n");
-                    result.append("Состояние линии аксессуаров: "); result.append(responseParams.getFieldByKey("ACC").getValue().equals("0") ? "выключено (OFF)" : "включено (ON)"); result.append('\n');
-                    result.append("Состояние линии зажигания: "); result.append(responseParams.getFieldByKey("IGN").getValue().equals("0") ? "выключено (OFF)" : "включено (ON)"); result.append('\n');
-                    result.append("Состояние линии габаритных огней: "); result.append(responseParams.getFieldByKey("PLT").getValue().equals("0") ? "выключено (OFF)" : "включено (ON)"); result.append('\n');
-                    result.append("Состояние линии ручника: "); result.append(responseParams.getFieldByKey("HB").getValue().equals("0") ? "выключено (OFF)" : "включено (ON)"); result.append('\n');
-                    result.append("Состояние линии сигнала поворотников: "); result.append(responseParams.getFieldByKey("TS").getValue().equals("0") ? "выключено (OFF)" : "включено (ON)"); result.append('\n');
-                    result.append("Время с RTC: "); result.append(responseParams.getFieldByKey("TIME").getValue()); result.append('\n');
-                    result.append("Количество ошибок связи по I2C: "); result.append(responseParams.getFieldByKey("CER").getValue()); result.append('\n');
-                    result.append("Количество накопленных оборотов коленчатого вала: "); result.append(responseParams.getFieldByKey("MC").getValue()); result.append('\n');
-                    result.append("Количество мото-часов: "); result.append(responseParams.getFieldByKey("MHR").getValue()); result.append('\n');
+                    result.append("Напряжение в бортовой линии: ");
+                    result.append(responseParams.getFieldByKey("VM_L").getValue());
+                    result.append(" вольт\n");
+                    result.append("Напряжение на датчике температуры: ");
+                    result.append(responseParams.getFieldByKey("VM_T").getValue());
+                    result.append(" вольт\n");
+                    result.append("Напряжение на датчике уровня топлива: ");
+                    result.append(responseParams.getFieldByKey("VM_F").getValue());
+                    result.append(" вольт\n");
+                    result.append("Показания тахометра: ");
+                    result.append(responseParams.getFieldByKey("RPM").getValue());
+                    result.append(" об/мин\n");
+                    result.append("Состояние линии аксессуаров: ");
+                    result.append(responseParams.getFieldByKey("ACC").getValue().equals("0") ? "выключено (OFF)" : "включено (ON)");
+                    result.append('\n');
+                    result.append("Состояние линии зажигания: ");
+                    result.append(responseParams.getFieldByKey("IGN").getValue().equals("0") ? "выключено (OFF)" : "включено (ON)");
+                    result.append('\n');
+                    result.append("Состояние линии габаритных огней: ");
+                    result.append(responseParams.getFieldByKey("PLT").getValue().equals("0") ? "выключено (OFF)" : "включено (ON)");
+                    result.append('\n');
+                    result.append("Состояние линии ручника: ");
+                    result.append(responseParams.getFieldByKey("HB").getValue().equals("0") ? "выключено (OFF)" : "включено (ON)");
+                    result.append('\n');
+                    result.append("Состояние линии сигнала поворотников: ");
+                    result.append(responseParams.getFieldByKey("TS").getValue().equals("0") ? "выключено (OFF)" : "включено (ON)");
+                    result.append('\n');
+                    result.append("Время с RTC: ");
+                    result.append(responseParams.getFieldByKey("TIME").getValue());
+                    result.append('\n');
+                    result.append("Количество ошибок связи по I2C: ");
+                    result.append(responseParams.getFieldByKey("CER").getValue());
+                    result.append('\n');
+                    result.append("Количество накопленных оборотов коленчатого вала: ");
+                    result.append(responseParams.getFieldByKey("MC").getValue());
+                    result.append('\n');
+                    result.append("Количество мото-часов: ");
+                    result.append(responseParams.getFieldByKey("MHR").getValue());
+                    result.append('\n');
                     result.append("Текущая надпись в строке статуса: ");
                     result.append(responseParams.getFieldByKey("SBC").getValue());
                     result.append('\n');
-                    result.append("Уровень топлива: "); result.append(responseParams.getFieldByKey("FL").getValue()); result.append(" л.\n");
+                    result.append("Уровень топлива: ");
+                    result.append(responseParams.getFieldByKey("FL").getValue());
+                    result.append(" л.\n");
                     result.append("Температура двигателя: ");
                     result.append(responseParams.getFieldByKey("TP").getValue());
                     result.append(" °C\n");

@@ -28,6 +28,7 @@ public class BORT_connection implements SerialPortEventListener, Closeable {
     private final ArrayList<BORT_response> responsesStack = new ArrayList<>();
     private final SerialPort serialPort;
     private final StringBuilder receivingBuf = new StringBuilder();
+    private final DebugInformationListener debugInformationListener;
     private boolean isConnected = false;
 
     /**
@@ -35,7 +36,8 @@ public class BORT_connection implements SerialPortEventListener, Closeable {
      *
      * @param portName Название COM - порта, через который будет осуществлено подключение
      */
-    public BORT_connection(String portName) {
+    public BORT_connection(String portName, DebugInformationListener debugInformationListener) {
+        this.debugInformationListener = debugInformationListener;
         serialPort = new SerialPort(portName);
         try {
             serialPort.openPort();
@@ -49,6 +51,7 @@ public class BORT_connection implements SerialPortEventListener, Closeable {
 
     /**
      * Метод конвертирует массив байтов в строку, представляя каждый байт, как символ.
+     *
      * @param buf входной массив байтов, который необходимо конвертировать
      * @return Строка, состоящая из символов, которые представляют каждый отдельный элемент.
      */
@@ -69,20 +72,20 @@ public class BORT_connection implements SerialPortEventListener, Closeable {
         if (event.isRXCHAR() && event.getEventValue() > 1) {
             try {
                 String receivedStr = convertByteArrayToANSIStr(serialPort.readBytes(event.getEventValue()));
-               for (int i = 0; i < receivedStr.length(); i++) {
-                   if (receivedStr.charAt(i) == '\r') {
-                       String gettedStr = receivingBuf.toString();
-                       receivingBuf.setLength(0);
-                       processReceivedStr(gettedStr);
-                   } else {
-                       if (receivingBuf.length() > 32768) {
-                           receivingBuf.setLength(0);
-                       }
-                       if (receivedStr.charAt(i) != '\n')
-                       receivingBuf.append(receivedStr.charAt(i));
-                   }
+                for (int i = 0; i < receivedStr.length(); i++) {
+                    if (receivedStr.charAt(i) == '\r') {
+                        String gettedStr = receivingBuf.toString();
+                        receivingBuf.setLength(0);
+                        processReceivedStr(gettedStr);
+                    } else {
+                        if (receivingBuf.length() > 32768) {
+                            receivingBuf.setLength(0);
+                        }
+                        if (receivedStr.charAt(i) != '\n')
+                            receivingBuf.append(receivedStr.charAt(i));
+                    }
 
-               }
+                }
             } catch (SerialPortException ignored) {
             } catch (InterpretationException e) {
                 System.err.println("Непредвиденная ошибка приёма данных: " + e);
@@ -91,11 +94,16 @@ public class BORT_connection implements SerialPortEventListener, Closeable {
     }
 
     private void processReceivedStr(String receivedStr) throws InterpretationException {
-        receivedStr = receivedStr.trim();
-        if (receivedStr.equals("!101:")) {
-            isConnected = true;
+        BORT_response gettedResponse = new BORT_response(receivedStr.trim());
+        switch (gettedResponse.getResponseType()) {
+            case MODULE_STARTED:
+                isConnected = true;
+                break;
+            case DEBUG_INFORMATION:
+                debugInformationListener.debugInformationGetted(gettedResponse);
+                break;
         }
-        responsesStack.add(new BORT_response(receivedStr));
+        responsesStack.add(gettedResponse);
     }
 
     public ArrayList<BORT_response> getResponsesStack() {
@@ -132,6 +140,7 @@ public class BORT_connection implements SerialPortEventListener, Closeable {
     public void close() {
         try {
             serialPort.closePort();
-        } catch (SerialPortException ignored) {}
+        } catch (SerialPortException ignored) {
+        }
     }
 }

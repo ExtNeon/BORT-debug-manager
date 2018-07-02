@@ -1,7 +1,4 @@
-import classes.BORT_connection;
-import classes.BORT_response;
-import classes.BORT_responseType;
-import classes.Primitive_KeyValueRecord;
+import classes.*;
 import com.sun.jnlp.ApiDialog;
 import forms.MainGUIForm;
 import forms.dialogs.AreYouSureDialogProcessor;
@@ -27,7 +24,7 @@ import java.util.concurrent.TimeoutException;
 
 
 @SuppressWarnings("FieldCanBeLocal")
-class BORT_debug_manager implements ActionListener {
+class BORT_debug_manager implements ActionListener, DebugInformationListener {
 
     //Максимальное время ожидания ответа от модуля при подключении к порту
     private final long MAX_CONNECTION_WAIT_TIMEOUT = 3000;
@@ -125,6 +122,7 @@ class BORT_debug_manager implements ActionListener {
                 saveSettingsToEEPROM();
                 break;
             case "update paramslist":
+            case "refresh settings":
                 updateParamsList();
                 break;
             case "hold connection":
@@ -211,9 +209,7 @@ class BORT_debug_manager implements ActionListener {
     }
 
     private void setTimeOnRTC() throws InterruptedException, TimeoutException {
-        Date dateNow = new Date();
-        SimpleDateFormat formatForDateNow = new SimpleDateFormat("HH:mm:ss");
-        String currentTime = formatForDateNow.format(dateNow);
+        String currentTime = new SimpleDateFormat("HH:mm:ss").format(new Date());
         mainGUIForm.updateStatus("Устанавливаем текущее время в RTC...");
         connection.send("$2:32=" + currentTime);
         BORT_responseType waitingResponseTypes[] = {BORT_responseType.ERR_WRONG_PARAM_NAME, BORT_responseType.PARAM_RW_SUCCESS};
@@ -298,6 +294,7 @@ class BORT_debug_manager implements ActionListener {
             writeAllParametersIntoModule(loadedSettings.getSectionByName("BORT_PARAMS"));
             saveSettingsToEEPROM();
             restartModule();
+            updateParamsList();
             mainGUIForm.updateStatus("Операция выполнена");
         } catch (IOException e) {
             mainGUIForm.updateErrorStatus("Ошибка ввода - вывода при чтении из файла: " + e.getMessage());
@@ -390,8 +387,9 @@ class BORT_debug_manager implements ActionListener {
     /**
      * Запрашивает у пользователя разрешение на сброс энергонезависимой памяти модуля, и в случае успеха, отправляет запрос на сброс на модуль.
      * Ждёт ответа от модуля в течение RESPONSE_WAIT_TIMEOUT миллисекунд.
+     *
      * @throws InterruptedException В случае, если пользователь отказался сбрасывать память контроллера.
-     * @throws TimeoutException В случае, если ответ от модуля не был получен в течение RESPONSE_WAIT_TIMEOUT миллисекунд.
+     * @throws TimeoutException     В случае, если ответ от модуля не был получен в течение RESPONSE_WAIT_TIMEOUT миллисекунд.
      */
     private void reset_EEPROM() throws InterruptedException, TimeoutException {
         if (new AreYouSureDialogProcessor().showDialog("ВЫ УВЕРЕНЫ В ТОМ, ЧТО ХОТИТЕ СБРОСИТЬ ВСЕ СОХРАНЁННЫЕ ДАННЫЕ И НАСТРОЙКИ МОДУЛЯ?\n" +
@@ -404,10 +402,12 @@ class BORT_debug_manager implements ActionListener {
         BORT_response gettedResponse = waitForIncomingResponse(waitingResponseTypes, RESPONSE_WAIT_TIMEOUT);
         mainGUIForm.updateStatus(gettedResponse.toString());
         restartModule();
+        updateParamsList();
     }
 
     /**
      * Посылает на модуль запрос о сохранении параметров в энергонезависимую память, и ждёт ответа в течение RESPONSE_WAIT_TIMEOUT.
+     *
      * @throws TimeoutException В случае, если ответ не был получен в течение RESPONSE_WAIT_TIMEOUT.
      */
     private void saveSettingsToEEPROM() throws TimeoutException {
@@ -421,6 +421,7 @@ class BORT_debug_manager implements ActionListener {
     /**
      * Посылает на модуль запрос о получении статистики, и в течение RESPONSE_WAIT_TIMEOUT миллисекунд ждёт от него ответа.
      * При получении ответа, обновляет информацию в пользовательском интерфейсе
+     *
      * @throws TimeoutException В случае, если модуль не ответил вовремя.
      */
     private void requestStatistics() throws TimeoutException {
@@ -433,8 +434,9 @@ class BORT_debug_manager implements ActionListener {
 
     /**
      * Метод ожидает получение определённого ответа от модуля в течение некоторого времени
+     *
      * @param responseTypes Типы ответа от модуля, которые должны быть приняты. Все остальные типы будут проигнорированы
-     * @param timeout Максимальное время ожидания ответа. По истечении этого времени выбрасывается исключение TimeoutException
+     * @param timeout       Максимальное время ожидания ответа. По истечении этого времени выбрасывается исключение TimeoutException
      * @return Ответ от модуля, который принадлежит одному из типов в массиве responseTypes
      * @throws TimeoutException В случае, если ответ от модуля не пришёл в течение timeout миллисекунд
      */
@@ -467,7 +469,7 @@ class BORT_debug_manager implements ActionListener {
             if (SerialPortList.getPortNames().length > 0) {
                 for (String selectedPort : SerialPortList.getPortNames()) {
                     long connection_startedTime = System.currentTimeMillis();
-                    BORT_connection = new BORT_connection(selectedPort);
+                    BORT_connection = new BORT_connection(selectedPort, this);
                     while (System.currentTimeMillis() - connection_startedTime < MAX_CONNECTION_WAIT_TIMEOUT
                             && !BORT_connection.isConnected()) {
                         delayMs(100); //Ждём до тех пор, пока не будет осуществлено подключение, либо пока не выйдет время.
@@ -506,5 +508,11 @@ class BORT_debug_manager implements ActionListener {
     @Override
     public void actionPerformed(ActionEvent actionEvent) {
         this.actionEvent = actionEvent;
+    }
+
+    @Override
+    public void debugInformationGetted(BORT_response response) {
+        String currentTime = new SimpleDateFormat("HH:mm:ss").format(new Date());
+        mainGUIForm.updateDebugStatusBar(currentTime + " | " + response.toString() + '\n');
     }
 }

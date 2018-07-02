@@ -5,6 +5,7 @@ package classes;
  */
 public enum BORT_responseType {
     MODULE_STARTED,
+    DEBUG_INFORMATION,
     ECHO,
     PARAM_RW_SUCCESS,
     EEPROM_RESET_SUCCESS,
@@ -20,11 +21,13 @@ public enum BORT_responseType {
     ERR_RTC_CONNECTION_FAILED,
     INFO_STATISTICS,
     UNKNOWN;
-    
+
     public static BORT_responseType getResponseTypeFromNumericalCode(int code) {
         switch (code) {
             case 101:
                 return MODULE_STARTED;
+            case 111:
+                return DEBUG_INFORMATION;
             case 115:
                 return ECHO;
             case 303:
