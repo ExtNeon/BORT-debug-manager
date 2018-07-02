@@ -25,19 +25,15 @@ import java.util.ArrayList;
  */
 public class BORT_connection implements SerialPortEventListener, Closeable {
 
-    // --Commented out by Inspection (01.07.2018 0:21):private boolean responsesStackUpdated = false;
     private final ArrayList<BORT_response> responsesStack = new ArrayList<>();
     private final SerialPort serialPort;
     private final StringBuilder receivingBuf = new StringBuilder();
-    /*
-    ********Стандартные мелодии********
-     */
     private boolean isConnected = false;
 
     /**
      * Конструктор. Открывает COM - порт на скорости 115200 бод, подключается и ждёт ответа от устройства.
      *
-     * @param portName                    Название COM - порта, через который будет осуществлено подключение
+     * @param portName Название COM - порта, через который будет осуществлено подключение
      */
     public BORT_connection(String portName) {
         serialPort = new SerialPort(portName);
@@ -73,9 +69,6 @@ public class BORT_connection implements SerialPortEventListener, Closeable {
         if (event.isRXCHAR() && event.getEventValue() > 1) {
             try {
                 String receivedStr = convertByteArrayToANSIStr(serialPort.readBytes(event.getEventValue()));
-               /* if (receivedStr.contains("\n")) {
-                    receivedStr = receivedStr.substring(0, receivedStr.indexOf('\n'));
-                }*/
                for (int i = 0; i < receivedStr.length(); i++) {
                    if (receivedStr.charAt(i) == '\r') {
                        String gettedStr = receivingBuf.toString();
@@ -103,26 +96,14 @@ public class BORT_connection implements SerialPortEventListener, Closeable {
             isConnected = true;
         }
         responsesStack.add(new BORT_response(receivedStr));
-        //responsesStackUpdated = true;
     }
 
     public ArrayList<BORT_response> getResponsesStack() {
         return responsesStack;
     }
 
-// --Commented out by Inspection START (01.07.2018 0:18):
-//    public boolean isResponsesStackUpdated(boolean resetFlag) {
-//        boolean flag_copy = responsesStackUpdated;
-//        if (resetFlag) {
-//            responsesStackUpdated = false;
-//        }
-//        return flag_copy;
-//    }
-// --Commented out by Inspection STOP (01.07.2018 0:18)
-
     public void clearResponsesStack() {
         responsesStack.clear();
-        //responsesStackUpdated = false;
     }
 
     /**

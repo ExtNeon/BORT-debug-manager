@@ -11,7 +11,9 @@ import iniSettings.exceptions.RecordParsingException;
 import java.util.ArrayList;
 
 /**
- * Created by Кирилл on 10.06.2018.
+ * Класс, представляющий ответ от модуля в виде объекта.
+ * Имеет такие свойства, как тип ответа в виде объекта BORT_responseType и параметры ответа в виде секции ini - файла,
+ * выраженной в форме объекта INISettingsSection
  */
 public class BORT_response {
     private final INISettingsSection responseParams = new INISettingsSection("BORT_RESPONSE");
@@ -54,7 +56,6 @@ public class BORT_response {
     }
 
     private void addParamsIntoSection(ArrayList<String> input) throws RecordParsingException {
-        //ArrayList<INISettingsRecord> result = new ArrayList<>(input.size());
         for (String currentParam : input) {
             if (currentParam.contains("=")) {
                 try {

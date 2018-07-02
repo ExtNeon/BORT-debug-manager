@@ -29,7 +29,9 @@ import java.util.concurrent.TimeoutException;
 @SuppressWarnings("FieldCanBeLocal")
 class BORT_debug_manager implements ActionListener {
 
+    //Максимальное время ожидания ответа от модуля при подключении к порту
     private final long MAX_CONNECTION_WAIT_TIMEOUT = 3000;
+    //Максимальное время ожидания ответа от модуля при отправке какого - либо запроса
     private final long RESPONSE_WAIT_TIMEOUT = 300;
     private final Primitive_KeyValueRecord MODULE_PARAMETERS_LIST[] = {
             new Primitive_KeyValueRecord(1, "Интервал вывода информации (миллисекунд)"),
@@ -72,7 +74,7 @@ class BORT_debug_manager implements ActionListener {
         mainGUIForm = new MainGUIForm(new Dimension(800, 500), this);
         connection = findAndConnectToTheModule();
         checkRTCparams();
-        while (true) {
+        while (mainGUIForm.isShowing()) {
             if (connectionErrorsCounter >= RECONNECT_ERRORS_THRESHOLD || connection == null || !connection.getSerialPort().isOpened()) {
                 mainGUIForm.updateStatus("Соединение потеряно. Переподключаемся...");
                 if (connection != null) {
@@ -141,9 +143,6 @@ class BORT_debug_manager implements ActionListener {
         mainGUIForm.getParametersListPane().setEnabled(false);
         mainGUIForm.getSelectedParameterComboBox().setEnabled(false);
         mainGUIForm.setParamsList(readAllParametersFromModule(false));
-
-        /*mainGUIForm.getTable1().removeAll();
-        mainGUIForm.getTable1().addColumn(new TableColumn());*/
     }
 
     private void checkRTCparams() {
@@ -165,76 +164,8 @@ class BORT_debug_manager implements ActionListener {
         while (!mainGUIForm.getHoldConnectionCheckBox().isSelected()) {
             delayMs(100);
         }
-        //actionEvent = null;
         connection = null;
     }
-
-    /*private void runMenu() {
-
-        while (connection.getSerialPort().isOpened()) {
-            if (connectionErrorsCounter >= RECONNECT_ERRORS_THRESHOLD) {
-                mainGUIForm.updateErrorStatus("Соединение потеряно. Переподключаемся...");
-                closeConnection(false);
-                connection = findAndConnectToTheModule();
-                connectionErrorsCounter = 0;
-            }
-            mainGUIForm.updateStatus("\n\n\n\nВыберите действие:");
-            mainGUIForm.updateStatus("set - установить значение параметра");
-            mainGUIForm.updateStatus("restart - перезагрузить бортовой компьютер");
-            mainGUIForm.updateStatus("time - установить текущее время на RTC");
-            mainGUIForm.updateStatus("export - прочесть все настройки бортовика и по желанию сохранить в ini - файле");
-            mainGUIForm.updateStatus("import - загрузить настройки бортовика из ini - файла, и поместить в бортовик");
-            mainGUIForm.updateStatus("save - сохранить все изменённые настройки в энергонезависимую память");
-            mainGUIForm.updateStatus("reset EP - сбросить все настройки бортовика на настройки по умолчанию.");
-            mainGUIForm.updateStatus("info или просто нажмите enter - показать текущую статистику");
-            mainGUIForm.updateStatus("reconnect - переподключиться");
-            try {
-                switch(getEnteredString("_>").toLowerCase().trim()) {
-                    case "set":
-                        setParameterDialog();
-                        break;
-                    case "restart":
-                        restartModule();
-                        break;
-                    case "export":
-                        exportModuleSettingsToFile();
-                        break;
-                    case "import":
-                        importParamsIntoModule();
-                        break;
-                    case "time":
-                        setTimeOnRTC();
-                        break;
-                    case "reset ep":
-                        reset_EEPROM();
-                        break;
-                    case "info":
-                    case "":
-                        requestStatistics();
-                        break;
-                    case "save":
-                        saveSettingsToEEPROM();
-                        break;
-                    case "reconnect":
-                        connection.close();
-                        connection = findAndConnectToTheModule();
-                        break;
-                    default:
-                        throw new InvalidParameterException();
-                }
-                connectionErrorsCounter = 0;
-            } catch (InterruptedException e) {
-                mainGUIForm.updateStatus("Операция прервана");
-            } catch (TimeoutException e) {
-                connectionErrorsCounter++;
-                mainGUIForm.updateErrorStatus("Ошибка получения данных: таймаут");
-            } catch (InvalidParameterException e) {
-                mainGUIForm.updateErrorStatus("Неизвестная команда");
-            }
-            getEnteredString("Чтобы перейти к меню, нажмите enter");
-        }
-    }*/
-
 
     private void exportModuleSettingsToFile() throws InterruptedException {
         try {
@@ -250,10 +181,6 @@ class BORT_debug_manager implements ActionListener {
                 throw new InterruptedException();
             }
 
-           /* String gettedFileName = new InputStringDialogProcessor().showDialog("Введите путь до файла, в который вы хотите сохранить параметры, или нажмите enter, если вы не хотите её сохранять...\n_>");
-            if (gettedFileName.equals("")) {
-                throw new InterruptedException();
-            }*/
             mainGUIForm.updateStatus("Сохраняем настройки в файл...");
             readedParameters.saveToFile(gettedFileName);
             mainGUIForm.updateStatus("Настройки успешно сохранены!");
@@ -297,14 +224,6 @@ class BORT_debug_manager implements ActionListener {
                 mainGUIForm.updateErrorStatus("Ошибка при установке времени.");
                 throw new InterruptedException();
             }
-           /* connection.send("$8:");
-            BORT_responseType new_waitingResponseTypes[] = {BORT_responseType.ERR_RTC_CONNECTION_FAILED, BORT_responseType.ERR_RTC_UNSETTED, BORT_responseType.RTC_TIME_READ_SUCCESS};
-            BORT_response new_gettedResponse = waitForIncomingResponse(new_waitingResponseTypes, RESPONSE_WAIT_TIMEOUT);
-            if (new_gettedResponse.getResponseType() == BORT_responseType.RTC_TIME_READ_SUCCESS || new_gettedResponse.getResponseParams().getRecords().size() > 0) {
-                mainGUIForm.updateStatus("Текущее время по RTC: " + new_gettedResponse.getResponseParams().getFieldByKey("RTC").getValue());
-            } else {
-                mainGUIForm.updateErrorStatus(gettedResponse);
-            }*/
         } else {
             mainGUIForm.updateErrorStatus(gettedResponse.toString());
         }
@@ -323,49 +242,18 @@ class BORT_debug_manager implements ActionListener {
     }
 
     private void setParameterDialog() throws InterruptedException, TimeoutException {
-        //printListOfAvailableParameters();
-        /*try {
-            readAllParametersFromModule();
-        } catch (UnexpectedException e) {
-            mainGUIForm.updateErrorStatus(e.getMessage());
-            throw new InterruptedException();
-        }*/
-        // boolean success = false;
-        //do {
         try {
-           /* String gettedStr = getEnteredString("Введите название параметра, или нажмите enter для выхода...\n_>");
-            if (gettedStr.equals("")) {
-                throw new InterruptedException();
-            }*/
             int paramIndex = getParamIndexFromParamName((String) mainGUIForm.getSelectedParameterComboBox().getSelectedItem());
-            //readParameter(paramIndex);
-            // gettedStr = getEnteredString("Введите новое значение параметра, или нажмите enter для выхода...\n_>");
             if (mainGUIForm.getSelectedParamNewValueField().getText().equals("")) {
                 mainGUIForm.updateErrorStatus("Новое значение параметра не может быть пустым");
             } else {
                 writeParameter(paramIndex, mainGUIForm.getSelectedParamNewValueField().getText().trim());
                 updateParamsList();
             }
-            //success = true;
         } catch (NotFoundException e) {
             mainGUIForm.updateErrorStatus("Параметра с данным названием не существует.");
         }
-        // } while (!success);
     }
-
-// --Commented out by Inspection START (01.07.2018 0:18):
-//    private void readParameter(int paramId) throws TimeoutException {
-//        connection.send("$3:" + paramId + '=');
-//        mainGUIForm.updateStatus("Читаем значение параметра...");
-//        BORT_responseType waitingResponseTypes[] = {BORT_responseType.ERR_WRONG_PARAM_NAME, BORT_responseType.PARAM_RW_SUCCESS};
-//        BORT_response gettedResponse = waitForIncomingResponse(waitingResponseTypes, RESPONSE_WAIT_TIMEOUT);
-//        if (gettedResponse.getResponseType() != BORT_responseType.ERR_WRONG_PARAM_NAME && gettedResponse.getResponseParams().getRecords().size() > 0) {
-//            mainGUIForm.updateStatus("Ответ получен. Текущее значение параметра: \"" + gettedResponse.getResponseParams().getRecords().get(0).getValue() + '"');
-//        } else {
-//            mainGUIForm.updateErrorStatus(gettedResponse.toString());
-//        }
-//    }
-// --Commented out by Inspection STOP (01.07.2018 0:18)
 
     private void writeParameter(int paramId, String value) throws TimeoutException {
         connection.send("$2:" + paramId + '=' + value);
@@ -388,15 +276,6 @@ class BORT_debug_manager implements ActionListener {
         }
         throw new NotFoundException();
     }
-
-// --Commented out by Inspection START (01.07.2018 0:18):
-//    private void printListOfAvailableParameters() {
-//        mainGUIForm.updateStatus("Список доступных параметров: ");
-//        for (Primitive_KeyValueRecord currentParam : MODULE_PARAMETERS_LIST) {
-//            mainGUIForm.updateStatus(currentParam.value);
-//        }
-//    }
-// --Commented out by Inspection STOP (01.07.2018 0:18)
 
     private void importParamsIntoModule() throws InterruptedException, TimeoutException {
         String gettedFileName;
@@ -436,7 +315,6 @@ class BORT_debug_manager implements ActionListener {
      */
     private void writeAllParametersIntoModule(INISettingsSection parameters) {
         mainGUIForm.updateStatus("Записываем настройки в модуль...");
-        //System.out.print(getPercentLine(0, 60));
         int paramsWritedCounter = 0;
         boolean allWritedSucessfully = true;
         mainGUIForm.getProgressBar().setVisible(true);
@@ -446,7 +324,6 @@ class BORT_debug_manager implements ActionListener {
             try {
                 mainGUIForm.getProgressBar().setValue(++paramsWritedCounter);
                 mainGUIForm.updateStatus("Запись " + paramsWritedCounter + " из " + parameters.getRecords().size() + " - " + currentParameter.getKey() + "...");
-                //System.out.print('\r' + getPercentLine(paramsWritedCounter++ * 100 / parameters.getRecords().size(), 60) + " (" + currentParameter.getKey() + ')');
                 connection.send("$2:" + getParamIndexFromParamName(currentParameter.getKey()) + '=' + currentParameter.getValue());
                 BORT_responseType waitingResponseTypes[] = {BORT_responseType.ERR_WRONG_PARAM_NAME, BORT_responseType.PARAM_RW_SUCCESS};
                 BORT_response gettedResponse = waitForIncomingResponse(waitingResponseTypes, RESPONSE_WAIT_TIMEOUT);
@@ -484,18 +361,15 @@ class BORT_debug_manager implements ActionListener {
             mainGUIForm.getProgressBar().setMinimum(0);
             for (Primitive_KeyValueRecord currentParam : MODULE_PARAMETERS_LIST) {
                 connection.send("$3:" + currentParam.key + '=');
-                //System.out.print(currentParam.value + "... ");
                 mainGUIForm.getProgressBar().setValue(++counter);
                 mainGUIForm.updateStatus("Запрос параметра " + counter + " из " + MODULE_PARAMETERS_LIST.length + " - " + currentParam.value + "...");
                 try {
                     BORT_responseType waitingResponseTypes[] = {BORT_responseType.ERR_WRONG_PARAM_NAME, BORT_responseType.PARAM_RW_SUCCESS};
                     BORT_response gettedResponse = waitForIncomingResponse(waitingResponseTypes, RESPONSE_WAIT_TIMEOUT);
                     if (gettedResponse.getResponseType() != BORT_responseType.ERR_WRONG_PARAM_NAME && gettedResponse.getResponseParams().getRecords().size() > 0) {
-                        //mainGUIForm.updateStatus('\r' + currentParam.value + " = " + gettedResponse.getResponseParams().getRecords().get(0).getValue());
                         readedParamsList.addField(new INISettingsRecord(currentParam.value, gettedResponse.getResponseParams().getRecords().get(0).getValue()));
                     } else {
                         allIsSuccessful = false;
-                        //mainGUIForm.updateStatus("\r" + currentParam.value + " = " + gettedResponse);
                     }
                 } catch (TimeoutException e) {
                     allIsSuccessful = false;

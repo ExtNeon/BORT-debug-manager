@@ -59,6 +59,7 @@ public class INISettings {
      * @return Секция с заданным именем.
      * @throws NotFoundException В случае, если секции с подобным именем нет в списке.
      */
+    @SuppressWarnings("SameParameterValue")
     public INISettingsSection getSectionByName(String sectionName) throws NotFoundException {
         for (INISettingsSection selectedSection : sections) {
             if (selectedSection.getSectionName().equals(sectionName)) {

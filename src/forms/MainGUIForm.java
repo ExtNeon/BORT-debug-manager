@@ -103,11 +103,6 @@ public class MainGUIForm extends JFrame implements ChangeListener, ActionListene
         return parametersListPane;
     }
 
-    private void createUIComponents() {
-        // TODO: place custom component creation code here
-
-    }
-
     public JTextField getSelectedParamNewValueField() {
         return selectedParamNewValueField;
     }
