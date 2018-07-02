@@ -8,6 +8,7 @@ import java.util.ArrayList;
 /**
  * Класс представляет секцию INI - файла. Имеет собственное имя и список записей.
  * Позволяет добавлять записи и находить их по названию ключа.
+ *
  * @author Малякин Кирилл. 15ИТ20.
  */
 public class INISettingsSection {
@@ -29,16 +30,6 @@ public class INISettingsSection {
     public String getSectionName() {
         return sectionName;
     }
-
-// --Commented out by Inspection START (01.07.2018 0:18):
-//    /**
-//     * Метод устанавливает имя секции равным @code(sectionName).
-//     * @param sectionName Новое имя данной секции.
-//     */
-//    public void setSectionName(String sectionName) {
-//        this.sectionName = sectionName;
-//    }
-// --Commented out by Inspection STOP (01.07.2018 0:18)
 
     /**
      * @return Список всех записей
