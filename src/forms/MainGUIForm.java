@@ -7,14 +7,16 @@ import iniSettings.exceptions.NotFoundException;
 import javax.swing.*;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
 /**
- * Created by Кирилл on 30.06.2018.
+ * Основное окно программы.
  */
-public class MainGUIForm extends JFrame implements ChangeListener, ActionListener {
+public class MainGUIForm extends JFrame implements ChangeListener, ActionListener, ListSelectionListener {
     private final static int MAX_DEBUG_CONSOLE_TEXT_LENGTH = 30000;
     private final ActionListener listener;
     private JLabel MainCaption;
@@ -25,7 +27,6 @@ public class MainGUIForm extends JFrame implements ChangeListener, ActionListene
     private JButton importSettingsButton;
     private JButton exportSettingsButton;
     private JTextPane MainInfoTextPanel;
-    private JTextPane parametersListPane;
     private JComboBox<String> selectedParameterComboBox;
     private JTextArea logConsoleTextArea;
     private JTextField selectedParamNewValueField;
@@ -37,7 +38,10 @@ public class MainGUIForm extends JFrame implements ChangeListener, ActionListene
     private JTextArea debugConsoleTextArea;
     private JLabel debugStatusLabel;
     private JButton refreshSettingsButton;
+    private JList<String> parametersListBox;
     private INISettingsSection paramsList = null;
+
+    private boolean lastStatusErrorneus = false;
 
     public MainGUIForm(Dimension size, ActionListener listener) {
         this.getContentPane().add(MainPanel);
@@ -53,6 +57,7 @@ public class MainGUIForm extends JFrame implements ChangeListener, ActionListene
         exportSettingsButton.addActionListener(listener);
         holdConnectionCheckBox.addActionListener(listener);
         refreshSettingsButton.addActionListener(listener);
+        parametersListBox.addListSelectionListener(this);
         tabbedPane1.addChangeListener(this);
         this.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         selectedParameterComboBox.addActionListener(this);
@@ -61,7 +66,7 @@ public class MainGUIForm extends JFrame implements ChangeListener, ActionListene
     public void updateStatus(String newStatus) {
         statusLabel.setText(newStatus);
         statusLabel.setForeground(new Color(0, 0, 0));
-
+        lastStatusErrorneus = false;
         logConsoleTextArea.append(newStatus + '\n');
         logConsoleTextArea.select(logConsoleTextArea.getText().length() - newStatus.length(), logConsoleTextArea.getText().length());
         logConsoleTextArea.setSelectedTextColor(new Color(0, 0, 0));
@@ -69,6 +74,7 @@ public class MainGUIForm extends JFrame implements ChangeListener, ActionListene
     }
 
     public void updateErrorStatus(String newStatus) {
+        lastStatusErrorneus = true;
         statusLabel.setText(newStatus);
         statusLabel.setForeground(new Color(202, 0, 0));
         logConsoleTextArea.append(newStatus + '\n');
@@ -89,6 +95,10 @@ public class MainGUIForm extends JFrame implements ChangeListener, ActionListene
         return progressBar;
     }
 
+    public boolean isLastStatusErrorneus() {
+        return lastStatusErrorneus;
+    }
+
     public void updateDebugStatusBar(String info) {
         if (debugConsoleTextArea.getText().length() > MAX_DEBUG_CONSOLE_TEXT_LENGTH) {
             debugConsoleTextArea.setText("CLEARED");
@@ -99,21 +109,24 @@ public class MainGUIForm extends JFrame implements ChangeListener, ActionListene
 
     public void setParamsList(INISettingsSection paramsList) {
         this.paramsList = paramsList;
-        parametersListPane.setEnabled(true);
+        parametersListBox.setEnabled(true);
         selectedParameterComboBox.setEnabled(true);
-        parametersListPane.setText(paramsList.toString());
+        DefaultListModel<String> newModel = new DefaultListModel<>();
         selectedParameterComboBox.removeAllItems();
+        int counter = 1;
         for (INISettingsRecord currentRecord : paramsList.getRecords()) {
+            newModel.addElement(counter++ + ". " + currentRecord.getKey() + " = " + currentRecord.getValue());
             selectedParameterComboBox.addItem(currentRecord.getKey());
         }
+        parametersListBox.setModel(newModel);
     }
 
     public JComboBox<String> getSelectedParameterComboBox() {
         return selectedParameterComboBox;
     }
 
-    public JTextPane getParametersListPane() {
-        return parametersListPane;
+    public JList<String> getParametersListBox() {
+        return parametersListBox;
     }
 
     public JTextField getSelectedParamNewValueField() {
@@ -146,5 +159,15 @@ public class MainGUIForm extends JFrame implements ChangeListener, ActionListene
                 //updateErrorStatus("Не удалось найти параметр с таким именем");
             }
         }
+    }
+
+    /**
+     * Called whenever the value of the selection changes.
+     *
+     * @param e the event that characterizes the change.
+     */
+    @Override
+    public void valueChanged(ListSelectionEvent e) {
+        selectedParameterComboBox.setSelectedIndex(parametersListBox.getSelectedIndex());
     }
 }

@@ -166,12 +166,9 @@
                 <properties/>
                 <border type="none"/>
                 <children>
-                  <component id="400ca" class="javax.swing.JTextPane" binding="parametersListPane">
+                  <component id="c74ae" class="javax.swing.JList" binding="parametersListBox">
                     <constraints/>
-                    <properties>
-                      <editable value="false"/>
-                      <enabled value="true"/>
-                    </properties>
+                    <properties/>
                   </component>
                 </children>
               </scrollpane>

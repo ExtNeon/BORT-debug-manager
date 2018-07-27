@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.rmi.UnexpectedException;
 import java.security.InvalidParameterException;
 import java.text.SimpleDateFormat;
+import java.util.ConcurrentModificationException;
 import java.util.Date;
 import java.util.concurrent.TimeoutException;
 
@@ -26,13 +27,14 @@ import java.util.concurrent.TimeoutException;
 @SuppressWarnings("FieldCanBeLocal")
 class BORT_debug_manager implements ActionListener, DebugInformationListener {
 
+
     //Максимальное время ожидания ответа от модуля при подключении к порту
     private final long MAX_CONNECTION_WAIT_TIMEOUT = 3000;
     //Максимальное время ожидания ответа от модуля при отправке какого - либо запроса
     private final long RESPONSE_WAIT_TIMEOUT = 300;
     private final Primitive_KeyValueRecord MODULE_PARAMETERS_LIST[] = {
             new Primitive_KeyValueRecord(1, "Интервал вывода информации (миллисекунд)"),
-            new Primitive_KeyValueRecord(2, "Интервал подсчёта оборотов в минуту (миллисекунд)"),
+            new Primitive_KeyValueRecord(2, "Интервал подсчёта скорости вращения коленвала (миллисекунд)"),
             new Primitive_KeyValueRecord(3, "Интервал измерения напряжений (миллисекунд)"),
             new Primitive_KeyValueRecord(4, "Интервал обработки датчиков (миллисекунд)"),
             new Primitive_KeyValueRecord(5, "Интервал основного действия (миллисекунд)"),
@@ -43,6 +45,7 @@ class BORT_debug_manager implements ActionListener, DebugInformationListener {
             new Primitive_KeyValueRecord(10, "Интервал смены надписи статуса (миллисекунд)"),
             new Primitive_KeyValueRecord(8, "Интервал сохранения статистики (секунд)"),
             new Primitive_KeyValueRecord(13, "Включить возможность глубокого сна (0/1)"),
+            new Primitive_KeyValueRecord(45, "Включить сглаживание вычислений скорости вращения коленчатого вала (0/1)"),
             new Primitive_KeyValueRecord(22, "Уровень резервного напряжения"),
             new Primitive_KeyValueRecord(23, "Минимальное пороговое няпряжение для оповещения"),
             new Primitive_KeyValueRecord(24, "Максимальное пороговое няпряжение для оповещения"),
@@ -51,10 +54,17 @@ class BORT_debug_manager implements ActionListener, DebugInformationListener {
             new Primitive_KeyValueRecord(27, "Пороговые обороты, при которых оповещается о старте двигателя"),
             new Primitive_KeyValueRecord(28, "Пороговые обороты, при которых оповещается об остановке двигателя"),
             new Primitive_KeyValueRecord(29, "Пороговые обороты, при которых оповещается о поднятом ручнике"),
+            new Primitive_KeyValueRecord(46, "Пороговые обороты, при которых топливный насос будет работать постоянно"),
             new Primitive_KeyValueRecord(40, "Пороговый уровень температуры для сигнализации о перегреве"),
             new Primitive_KeyValueRecord(36, "Минимальный уровень топлива для оповещения (литров)"),
             new Primitive_KeyValueRecord(34, "Моточасы"),
             new Primitive_KeyValueRecord(35, "Количество оборотов моточасов (0-100000)"),
+            new Primitive_KeyValueRecord(44, "Минимальный интервал предварительной подкачки топлива (секунд)"),
+            new Primitive_KeyValueRecord(41, "Длительность предварительной подкачки топлива (секунд)"),
+            new Primitive_KeyValueRecord(42, "Час начала светового дня"),
+            new Primitive_KeyValueRecord(43, "Час конца светового дня"),
+
+
     };
     private final int RECONNECT_ERRORS_THRESHOLD = 3;
     private BORT_connection connection;
@@ -81,13 +91,16 @@ class BORT_debug_manager implements ActionListener, DebugInformationListener {
                 connectionErrorsCounter = 0;
                 checkRTCparams();
             }
-            delayMs(220);
+            delayMs(200);
             try {
                 requestStatistics();
                 if (actionEvent != null) {
                     interpretateAction();
                 }
                 connectionErrorsCounter = 0;
+                if (mainGUIForm.isLastStatusErrorneus()) {
+                    mainGUIForm.updateStatus("");
+                }
             } catch (InterruptedException e) {
                 mainGUIForm.updateStatus("Операция прервана");
             } catch (TimeoutException e) {
@@ -138,9 +151,12 @@ class BORT_debug_manager implements ActionListener, DebugInformationListener {
     }
 
     private void updateParamsList() throws InterruptedException {
-        mainGUIForm.getParametersListPane().setEnabled(false);
+        int lastIndex = mainGUIForm.getParametersListBox().getSelectedIndex();
+        mainGUIForm.getParametersListBox().setEnabled(false);
         mainGUIForm.getSelectedParameterComboBox().setEnabled(false);
         mainGUIForm.setParamsList(readAllParametersFromModule(false));
+        mainGUIForm.getParametersListBox().setSelectedIndex(lastIndex);
+        mainGUIForm.getSelectedParameterComboBox().setSelectedIndex(lastIndex);
     }
 
     private void checkRTCparams() {
@@ -193,7 +209,7 @@ class BORT_debug_manager implements ActionListener, DebugInformationListener {
     private boolean isTimeOnRTCsetted() throws TimeoutException {
         mainGUIForm.updateStatus("Запрашиваем текущее время...");
         try {
-            connection.send("$8:");
+            connection.send(CommandsConstList.CMD_READ_TIME_FROM_RTC);
             BORT_responseType waitingResponseTypes[] = {BORT_responseType.ERR_RTC_CONNECTION_FAILED, BORT_responseType.ERR_RTC_UNSETTED, BORT_responseType.RTC_TIME_READ_SUCCESS};
             BORT_response gettedResponse = waitForIncomingResponse(waitingResponseTypes, RESPONSE_WAIT_TIMEOUT);
             if (gettedResponse.getResponseType() == BORT_responseType.RTC_TIME_READ_SUCCESS || gettedResponse.getResponseParams().getRecords().size() > 0) {
@@ -211,7 +227,7 @@ class BORT_debug_manager implements ActionListener, DebugInformationListener {
     private void setTimeOnRTC() throws InterruptedException, TimeoutException {
         String currentTime = new SimpleDateFormat("HH:mm:ss").format(new Date());
         mainGUIForm.updateStatus("Устанавливаем текущее время в RTC...");
-        connection.send("$2:32=" + currentTime);
+        connection.send(CommandsConstList.CMD_SET + "32=" + currentTime);
         BORT_responseType waitingResponseTypes[] = {BORT_responseType.ERR_WRONG_PARAM_NAME, BORT_responseType.PARAM_RW_SUCCESS};
         BORT_response gettedResponse = waitForIncomingResponse(waitingResponseTypes, RESPONSE_WAIT_TIMEOUT);
         if (gettedResponse.getResponseType() != BORT_responseType.ERR_WRONG_PARAM_NAME && gettedResponse.getResponseParams().getRecords().size() > 0) {
@@ -226,7 +242,7 @@ class BORT_debug_manager implements ActionListener, DebugInformationListener {
     }
 
     private void restartModule() throws TimeoutException {
-        connection.send("$1:");
+        connection.send(CommandsConstList.CMD_RESTART_MODULE);
         mainGUIForm.updateStatus("Перезагружаем модуль...");
         BORT_responseType waitingResponseTypes[] = {BORT_responseType.RESTART_CMD_GETTED};
         waitForIncomingResponse(waitingResponseTypes, RESPONSE_WAIT_TIMEOUT);
@@ -252,7 +268,7 @@ class BORT_debug_manager implements ActionListener, DebugInformationListener {
     }
 
     private void writeParameter(int paramId, String value) throws TimeoutException {
-        connection.send("$2:" + paramId + '=' + value);
+        connection.send(CommandsConstList.CMD_SET + paramId + '=' + value);
         mainGUIForm.updateStatus("Записываем параметр...");
         BORT_responseType waitingResponseTypes[] = {BORT_responseType.ERR_WRONG_PARAM_NAME, BORT_responseType.PARAM_RW_SUCCESS};
         BORT_response gettedResponse = waitForIncomingResponse(waitingResponseTypes, RESPONSE_WAIT_TIMEOUT);
@@ -321,7 +337,7 @@ class BORT_debug_manager implements ActionListener, DebugInformationListener {
             try {
                 mainGUIForm.getProgressBar().setValue(++paramsWritedCounter);
                 mainGUIForm.updateStatus("Запись " + paramsWritedCounter + " из " + parameters.getRecords().size() + " - " + currentParameter.getKey() + "...");
-                connection.send("$2:" + getParamIndexFromParamName(currentParameter.getKey()) + '=' + currentParameter.getValue());
+                connection.send(CommandsConstList.CMD_SET + getParamIndexFromParamName(currentParameter.getKey()) + '=' + currentParameter.getValue());
                 BORT_responseType waitingResponseTypes[] = {BORT_responseType.ERR_WRONG_PARAM_NAME, BORT_responseType.PARAM_RW_SUCCESS};
                 BORT_response gettedResponse = waitForIncomingResponse(waitingResponseTypes, RESPONSE_WAIT_TIMEOUT);
                 if (gettedResponse.getResponseType() == BORT_responseType.ERR_WRONG_PARAM_NAME || gettedResponse.getResponseParams().getRecords().size() == 0) {
@@ -357,7 +373,7 @@ class BORT_debug_manager implements ActionListener, DebugInformationListener {
             mainGUIForm.getProgressBar().setMaximum(MODULE_PARAMETERS_LIST.length);
             mainGUIForm.getProgressBar().setMinimum(0);
             for (Primitive_KeyValueRecord currentParam : MODULE_PARAMETERS_LIST) {
-                connection.send("$3:" + currentParam.key + '=');
+                connection.send(CommandsConstList.CMD_READ_PARAM + currentParam.key + '=');
                 mainGUIForm.getProgressBar().setValue(++counter);
                 mainGUIForm.updateStatus("Запрос параметра " + counter + " из " + MODULE_PARAMETERS_LIST.length + " - " + currentParam.value + "...");
                 try {
@@ -397,7 +413,7 @@ class BORT_debug_manager implements ActionListener, DebugInformationListener {
             throw new InterruptedException();
         }
         mainGUIForm.updateStatus("Отправляем запрос на сброс...");
-        connection.send("$2:38=1");
+        connection.send(CommandsConstList.CMD_SET + "38=1");
         BORT_responseType waitingResponseTypes[] = {BORT_responseType.EEPROM_RESET_SUCCESS};
         BORT_response gettedResponse = waitForIncomingResponse(waitingResponseTypes, RESPONSE_WAIT_TIMEOUT);
         mainGUIForm.updateStatus(gettedResponse.toString());
@@ -412,7 +428,7 @@ class BORT_debug_manager implements ActionListener, DebugInformationListener {
      */
     private void saveSettingsToEEPROM() throws TimeoutException {
         mainGUIForm.updateStatus("Отправляем запрос на сохранение...");
-        connection.send("$4:");
+        connection.send(CommandsConstList.CMD_SAVE_SETTINGS_TO_EEPROM);
         BORT_responseType waitingResponseTypes[] = {BORT_responseType.EEPROM_SAVE_CMD_GETTED};
         BORT_response gettedResponse = waitForIncomingResponse(waitingResponseTypes, RESPONSE_WAIT_TIMEOUT);
         mainGUIForm.updateStatus(gettedResponse.toString());
@@ -425,7 +441,7 @@ class BORT_debug_manager implements ActionListener, DebugInformationListener {
      * @throws TimeoutException В случае, если модуль не ответил вовремя.
      */
     private void requestStatistics() throws TimeoutException {
-        connection.send("$7:");
+        connection.send(CommandsConstList.CMD_REQUEST_STATISTICS);
         //mainGUIForm.updateStatus("Запрашиваем статистику...");
         BORT_responseType waitingResponseTypes[] = {BORT_responseType.INFO_STATISTICS};
         BORT_response gettedResponse = waitForIncomingResponse(waitingResponseTypes, RESPONSE_WAIT_TIMEOUT);
@@ -444,14 +460,18 @@ class BORT_debug_manager implements ActionListener, DebugInformationListener {
         connection.clearResponsesStack();
         long capturedSysTime = System.currentTimeMillis();
         while (System.currentTimeMillis() - capturedSysTime < timeout) {
-            for (BORT_response currentResponse : connection.getResponsesStack()) {
-                for (BORT_responseType currentResponseType : responseTypes) {
-                    if (currentResponse.getResponseType() == currentResponseType) {
-                        return currentResponse;
+            try {
+                for (BORT_response currentResponse : connection.getResponsesStack()) {
+                    for (BORT_responseType currentResponseType : responseTypes) {
+                        if (currentResponse.getResponseType() == currentResponseType) {
+                            return currentResponse;
+                        }
                     }
                 }
+            } catch (ConcurrentModificationException ignored) { //Если мы получили ответ в процессе перебора
+
             }
-            delayMs(100);
+            delayMs(20);
         }
         throw new TimeoutException();
     }
