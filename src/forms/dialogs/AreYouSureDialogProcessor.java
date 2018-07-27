@@ -6,7 +6,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
 /**
- * Created by Кирилл on 30.06.2018.
+ * Диалоговое окно с текстом и двумя кнопками (OK, CANCEL). Является, по логике действия, модальным окном.
  */
 
 public class AreYouSureDialogProcessor implements ActionListener {
@@ -14,6 +14,13 @@ public class AreYouSureDialogProcessor implements ActionListener {
     private final AreYouSureDialog dialog = new AreYouSureDialog();
     private ApiDialog.DialogResult result = null;
 
+    /**
+     * Создаёт окно с текстом dialogText и двумя кнопками - OK и CANCEL. При этом, ждёт ответа от пользователя.
+     * Возвращает ту кнопку, которую он нажал в виде объекта DialogResult.
+     *
+     * @param dialogText Текст, который будет выведен в диалоге.
+     * @return ответ пользователя в виде объекта DialogResult.
+     */
     public ApiDialog.DialogResult showDialog(String dialogText) {
         dialog.setVisible(true);
         dialog.getDialogText().setText(dialogText);

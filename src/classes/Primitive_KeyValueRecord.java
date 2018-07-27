@@ -1,7 +1,7 @@
 package classes;
 
 /**
- * Created by Кирилл on 11.06.2018.
+ * Контейнер с двумя полями и конструктором. Примитив, в котором даже инкапсуляция не реализована.
  */
 public class Primitive_KeyValueRecord {
     public int key = 0;

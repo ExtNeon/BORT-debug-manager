@@ -5,7 +5,7 @@ import java.awt.*;
 import java.awt.event.ActionListener;
 
 /**
- * Created by Кирилл on 30.06.2018.
+ * Диалоговое окно с текстом и двумя кнопками.
  */
 class AreYouSureDialog extends JFrame {
 

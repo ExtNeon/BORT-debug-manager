@@ -1,7 +1,7 @@
 package classes;
 
 /**
- * Created by Кирилл on 10.06.2018.
+ * Список всех возможных типов ответов от модуля
  */
 public enum BORT_responseType {
     MODULE_STARTED,

@@ -1,9 +1,9 @@
 package exceptions;
 
 /**
- * Created by Кирилл on 10.06.2018.
+ * Выбрасывается в случае проблем с обработкой ответа от модуля.
  */
-public class InterpretationException extends Exception{
+public class InterpretationException extends Exception {
     /**
      * Constructs a new exception with the specified detail message.  The
      * cause is not initialized, and may subsequently be initialized by
