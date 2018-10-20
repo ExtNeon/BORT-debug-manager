@@ -119,36 +119,43 @@ class BORT_debug_manager implements ActionListener, DebugInformationListener {
 
         connection = findAndConnectToTheModule();
         checkRTCparams();
-        while (mainGUIForm.isShowing()) {
-            if (connectionErrorsCounter >= RECONNECT_ERRORS_THRESHOLD || connection == null || !connection.getSerialPort().isOpened()) {
-                mainGUIForm.updateStatus("Соединение потеряно. Переподключаемся...");
-                if (connection != null) {
-                    connection.close();
+        try {
+            while (mainGUIForm.isShowing()) {
+                if (connectionErrorsCounter >= RECONNECT_ERRORS_THRESHOLD || connection == null || !connection.getSerialPort().isOpened()) {
+                    mainGUIForm.updateStatus("Соединение потеряно. Переподключаемся...");
+                    if (connection != null) {
+                        connection.close();
+                    }
+                    connection = findAndConnectToTheModule();
+                    connectionErrorsCounter = 0;
+                    checkRTCparams();
                 }
-                connection = findAndConnectToTheModule();
-                connectionErrorsCounter = 0;
-                checkRTCparams();
+                delayMs(200);
+                try {
+                    requestStatistics();
+                    if (actionEvent != null) {
+                        interpretateAction();
+                    }
+                    connectionErrorsCounter = 0;
+                    if (System.currentTimeMillis() - mainGUIForm.getLastStatusUpdateTime() > (mainGUIForm.isLastStatusWasErroneous() ? ERRONEOUS_STATUS_HOLD_TIME : COMMON_STATUS_HOLD_TIME)) {
+                        mainGUIForm.updateStatus("");
+                    }
+                } catch (InterruptedException e) {
+                    mainGUIForm.updateStatus("Операция прервана");
+                } catch (TimeoutException e) {
+                    connectionErrorsCounter++;
+                    mainGUIForm.updateErrorStatus(CONST_STR_DATA_RECEIVING_TIMEOUT);
+                } catch (InvalidParameterException e) {
+                    mainGUIForm.updateErrorStatus("Неизвестная команда: " + e.getMessage());
+                }
+                mainGUIForm.getProgressBar().setVisible(false);
+                actionEvent = null;
             }
-            delayMs(200);
-            try {
-                requestStatistics();
-                if (actionEvent != null) {
-                    interpretateAction();
-                }
-                connectionErrorsCounter = 0;
-                if (System.currentTimeMillis() - mainGUIForm.getLastStatusUpdateTime() > (mainGUIForm.isLastStatusWasErroneous() ? ERRONEOUS_STATUS_HOLD_TIME : COMMON_STATUS_HOLD_TIME)) {
-                    mainGUIForm.updateStatus("");
-                }
-            } catch (InterruptedException e) {
-                mainGUIForm.updateStatus("Операция прервана");
-            } catch (TimeoutException e) {
-                connectionErrorsCounter++;
-                mainGUIForm.updateErrorStatus(CONST_STR_DATA_RECEIVING_TIMEOUT);
-            } catch (InvalidParameterException e) {
-                mainGUIForm.updateErrorStatus("Неизвестная команда: " + e.getMessage());
+        } catch (Exception anyUncatchedCriticalException) {
+            if (mainGUIForm.isShowing()) {
+                mainGUIForm.updateErrorStatus("CRITICAL ERROR: " + anyUncatchedCriticalException);
             }
-            mainGUIForm.getProgressBar().setVisible(false);
-            actionEvent = null;
+            System.err.println("CRITICAL ERROR (UNCATCHED): " + anyUncatchedCriticalException.toString());
         }
     }
 
