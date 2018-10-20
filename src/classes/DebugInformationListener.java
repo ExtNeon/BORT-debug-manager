@@ -1,8 +1,10 @@
 package classes;
 
 /**
- * Интерфейс - обработчик события. Единственный его метод вызывается в случае, если модуль прислал дебаг - информацию.
+ * Интерфейс - обработчик события. Его методы вызываются в случае, если модуль прислал дебаг - информацию.
  */
 public interface DebugInformationListener {
-    void debugInformationGetted(BORT_response response);
+    void debugInformationReceive(BORT_response response);
+
+    void errorMessageNotifyReceive(String message);
 }

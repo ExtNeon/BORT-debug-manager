@@ -1,6 +1,8 @@
 import classes.*;
 import com.sun.jnlp.ApiDialog;
 import forms.MainGUIForm;
+import forms.diagram.GraphDiagram;
+import forms.diagram.GraphLine;
 import forms.dialogs.AreYouSureDialogProcessor;
 import iniSettings.INISettings;
 import iniSettings.INISettingsRecord;
@@ -27,11 +29,9 @@ import java.util.concurrent.TimeoutException;
 @SuppressWarnings("FieldCanBeLocal")
 class BORT_debug_manager implements ActionListener, DebugInformationListener {
 
-
-    //Максимальное время ожидания ответа от модуля при подключении к порту
-    private final long MAX_CONNECTION_WAIT_TIMEOUT = 3000;
-    //Максимальное время ожидания ответа от модуля при отправке какого - либо запроса
-    private final long RESPONSE_WAIT_TIMEOUT = 300;
+    // TODO: 29.08.2018 Вывести все строковые литералы в константы и в отдельный языковой класс. Чисто для порядка.
+    private static final String CONST_STR_DATA_RECEIVING_TIMEOUT = "Ошибка получения данных: таймаут";
+    //Список параметров модуля
     private final Primitive_KeyValueRecord MODULE_PARAMETERS_LIST[] = {
             new Primitive_KeyValueRecord(1, "Интервал вывода информации (миллисекунд)"),
             new Primitive_KeyValueRecord(2, "Интервал подсчёта скорости вращения коленвала (миллисекунд)"),
@@ -44,11 +44,13 @@ class BORT_debug_manager implements ActionListener, DebugInformationListener {
             new Primitive_KeyValueRecord(33, "Время для пробуждения контроллера (миллисекунд)"),
             new Primitive_KeyValueRecord(10, "Интервал смены надписи статуса (миллисекунд)"),
             new Primitive_KeyValueRecord(8, "Интервал сохранения статистики (секунд)"),
+            new Primitive_KeyValueRecord(48, "Период накопления данных об уровне топлива (миллисекунд)"),
             new Primitive_KeyValueRecord(13, "Включить возможность глубокого сна (0/1)"),
+            new Primitive_KeyValueRecord(47, "Минимальное время простоя для инициации глубокого сна (миллисекунд)"),
+            new Primitive_KeyValueRecord(22, "Порог напряжения для инициации глубокого сна"),
             new Primitive_KeyValueRecord(45, "Включить сглаживание вычислений скорости вращения коленчатого вала (0/1)"),
-            new Primitive_KeyValueRecord(22, "Уровень резервного напряжения"),
             new Primitive_KeyValueRecord(23, "Минимальное пороговое няпряжение для оповещения"),
-            new Primitive_KeyValueRecord(24, "Максимальное пороговое няпряжение для оповещения"),
+            new Primitive_KeyValueRecord(24, "Максимальное количество ошибок дисплея для его сброса (если 0, то выкл)"),
             new Primitive_KeyValueRecord(25, "Уровень приглушённой подсветки (0-255)"),
             new Primitive_KeyValueRecord(26, "Уровень максимальной подсветки (0-255)"),
             new Primitive_KeyValueRecord(27, "Пороговые обороты, при которых оповещается о старте двигателя"),
@@ -63,22 +65,58 @@ class BORT_debug_manager implements ActionListener, DebugInformationListener {
             new Primitive_KeyValueRecord(41, "Длительность предварительной подкачки топлива (секунд)"),
             new Primitive_KeyValueRecord(42, "Час начала светового дня"),
             new Primitive_KeyValueRecord(43, "Час конца светового дня"),
-
-
     };
-    private final int RECONNECT_ERRORS_THRESHOLD = 3;
-    private BORT_connection connection;
-    private MainGUIForm mainGUIForm;
-    private volatile ActionEvent actionEvent = null;
-    private int connectionErrorsCounter = 0;
+    ///=================================КОНСТАНТЫ=================================
+    private final byte CONST_DIAGRAM_LINE_VOLTAGE_MAIN = 0; //Индексы линий напряжений в диаграмме
+    private final byte CONST_DIAGRAM_LINE_VOLTAGE_TEMPERATURE = 1;
+    private final byte CONST_DIAGRAM_LINE_VOLTAGE_FUEL = 2;
+    //==================================НАСТРОЙКИ=====================================
+    // TODO: 29.08.2018 Сделать нормальную вкладку с настройками в главном окне
+    //Максимальное время ожидания ответа от модуля при подключении к порту
+    private long MAX_CONNECTION_WAIT_TIMEOUT = 3000;
+    //Максимальное время ожидания ответа от модуля при отправке какого - либо запроса
+    private long RESPONSE_WAIT_TIMEOUT = 500;
+    //Количество ошибок связи, после которого соединение будет принудительно перезапущено
+    private int RECONNECT_ERRORS_THRESHOLD = 3;
+    //Длительность показа статуса с ошибкой, после чего он будет очищен
+    private long ERRONEOUS_STATUS_HOLD_TIME = 5000; //Millis
+    //Длительность показа статуса с информацией, после чего он будет очищен
+    private long COMMON_STATUS_HOLD_TIME = 2000; //Millis
+    //Максимальное количество измерений, сохряняемое в каждую из линий диаграммы
+    private int DIAGRAM_LINES_MAX_CAPACITY = 0;
+    ///================================ПОЛЯ КЛАССА================================
+    private BORT_connection connection; //Текущее соединение с модулем
+    private MainGUIForm mainGUIForm; //Основная форма
+    private volatile ActionEvent actionEvent = null; //Текущее полученное событие от формы
+    private int connectionErrorsCounter = 0; //Счётчик количества ошибок в соединении
+    private GraphDiagram voltageDiagram; //Диаграмма напряжений
+    private GraphDiagram RPM_diagram; //Диаграмма оборотов
+    private GraphDiagram temperatureDiagram; //Диаграмма температуры
+    private GraphDiagram fuelLevelDiagram; //Диаграмма уровня топлива
 
     public static void main(String[] args) {
-        System.out.println("BORT DEBUG MANAGER");
         new BORT_debug_manager().run();
     }
 
     private void run() {
         mainGUIForm = new MainGUIForm(new Dimension(800, 500), this);
+
+        voltageDiagram = new GraphDiagram(mainGUIForm.getDiagramPanel(), " volts", 20, 200);
+        RPM_diagram = new GraphDiagram(mainGUIForm.getDiagramPanel(), " RPM", 20, 100);
+        temperatureDiagram = new GraphDiagram(mainGUIForm.getDiagramPanel(), " C", 20, 300);
+        fuelLevelDiagram = new GraphDiagram(mainGUIForm.getDiagramPanel(), " litres", 20, 400);
+
+        voltageDiagram.getLines().add(new GraphLine(Color.BLUE, "Main voltage", DIAGRAM_LINES_MAX_CAPACITY)); //0
+        voltageDiagram.getLines().add(new GraphLine(new Color(0xAA0000), "Temperature sensor voltage", DIAGRAM_LINES_MAX_CAPACITY)); //1
+        voltageDiagram.getLines().add(new GraphLine(new Color(0x007000), "Fuel sensor voltage", DIAGRAM_LINES_MAX_CAPACITY)); //2
+
+        RPM_diagram.getLines().add(new GraphLine(Color.BLUE, "RPM", DIAGRAM_LINES_MAX_CAPACITY));
+
+        temperatureDiagram.getLines().add(new GraphLine(new Color(0xAA0000), "Engine temperature", DIAGRAM_LINES_MAX_CAPACITY));
+
+        fuelLevelDiagram.getLines().add(new GraphLine(new Color(0x007000), "Fuel level", DIAGRAM_LINES_MAX_CAPACITY));
+        mainGUIForm.getSelectGraphComboBox().addActionListener(this);
+
         connection = findAndConnectToTheModule();
         checkRTCparams();
         while (mainGUIForm.isShowing()) {
@@ -98,16 +136,16 @@ class BORT_debug_manager implements ActionListener, DebugInformationListener {
                     interpretateAction();
                 }
                 connectionErrorsCounter = 0;
-                if (mainGUIForm.isLastStatusErrorneus()) {
+                if (System.currentTimeMillis() - mainGUIForm.getLastStatusUpdateTime() > (mainGUIForm.isLastStatusWasErroneous() ? ERRONEOUS_STATUS_HOLD_TIME : COMMON_STATUS_HOLD_TIME)) {
                     mainGUIForm.updateStatus("");
                 }
             } catch (InterruptedException e) {
                 mainGUIForm.updateStatus("Операция прервана");
             } catch (TimeoutException e) {
                 connectionErrorsCounter++;
-                mainGUIForm.updateErrorStatus("Ошибка получения данных: таймаут");
+                mainGUIForm.updateErrorStatus(CONST_STR_DATA_RECEIVING_TIMEOUT);
             } catch (InvalidParameterException e) {
-                mainGUIForm.updateErrorStatus("Неизвестная команда");
+                mainGUIForm.updateErrorStatus("Неизвестная команда: " + e.getMessage());
             }
             mainGUIForm.getProgressBar().setVisible(false);
             actionEvent = null;
@@ -115,6 +153,7 @@ class BORT_debug_manager implements ActionListener, DebugInformationListener {
     }
 
     private void interpretateAction() throws TimeoutException, InterruptedException {
+        // TODO: 29.08.2018 Вынести все литералы в константы и в отдельный класс. Смысл есть: его использует и класс - GUI
         switch (actionEvent.getActionCommand().toLowerCase().trim()) {
             case "set":
                 setParameterDialog();
@@ -145,18 +184,43 @@ class BORT_debug_manager implements ActionListener, DebugInformationListener {
                 connection.close();
                 connection = findAndConnectToTheModule();
                 break;
+            case "clear diagram":
+                clearDiagram();
+                break;
             default:
-                throw new InvalidParameterException();
+                throw new InvalidParameterException(actionEvent.getActionCommand().toLowerCase().trim());
+        }
+    }
+
+    private void clearDiagram() {
+        switch (mainGUIForm.getSelectGraphComboBox().getSelectedIndex()) {
+            case MainGUIForm.CHOSEN_DIAGRAMM_TYPE_VOLTAGE:
+                voltageDiagram.getLines().get(CONST_DIAGRAM_LINE_VOLTAGE_MAIN).getValues().clear();
+                voltageDiagram.getLines().get(CONST_DIAGRAM_LINE_VOLTAGE_FUEL).getValues().clear();
+                voltageDiagram.getLines().get(CONST_DIAGRAM_LINE_VOLTAGE_TEMPERATURE).getValues().clear();
+                break;
+            case MainGUIForm.CHOSEN_DIAGRAMM_TYPE_RPM:
+                RPM_diagram.getLines().get(0).getValues().clear();
+                break;
+            case MainGUIForm.CHOSEN_DIAGRAMM_TYPE_TEMPERATURE:
+                temperatureDiagram.getLines().get(0).getValues().clear();
+                break;
+            case MainGUIForm.CHOSEN_DIAGRAMM_TYPE_FUEL_LEVEL:
+                fuelLevelDiagram.getLines().get(0).getValues().clear();
         }
     }
 
     private void updateParamsList() throws InterruptedException {
-        int lastIndex = mainGUIForm.getParametersListBox().getSelectedIndex();
-        mainGUIForm.getParametersListBox().setEnabled(false);
-        mainGUIForm.getSelectedParameterComboBox().setEnabled(false);
-        mainGUIForm.setParamsList(readAllParametersFromModule(false));
-        mainGUIForm.getParametersListBox().setSelectedIndex(lastIndex);
-        mainGUIForm.getSelectedParameterComboBox().setSelectedIndex(lastIndex);
+        try {
+            int lastIndex = mainGUIForm.getParametersListBox().getSelectedIndex();
+            mainGUIForm.getParametersListBox().setEnabled(false);
+            mainGUIForm.getSelectedParameterComboBox().setEnabled(false);
+            mainGUIForm.setParamsList(readAllParametersFromModule(false));
+            mainGUIForm.getParametersListBox().setSelectedIndex(lastIndex);
+            mainGUIForm.getSelectedParameterComboBox().setSelectedIndex(lastIndex);
+        } catch (IllegalArgumentException e) {
+            mainGUIForm.updateErrorStatus("Внутренняя ошибка #471: ошибка назначения индекса при выборе параметра.");
+        }
     }
 
     private void checkRTCparams() {
@@ -164,12 +228,12 @@ class BORT_debug_manager implements ActionListener, DebugInformationListener {
         try {
             isTimeOnRTCsetted();
             setTimeOnRTC();
+            mainGUIForm.updateStatus("Время синхронизировано успешно");
         } catch (InterruptedException ignored) {
         } catch (TimeoutException e) {
-            mainGUIForm.updateStatus("Ошибка получения данных: таймаут");
+            mainGUIForm.updateStatus(CONST_STR_DATA_RECEIVING_TIMEOUT);
             connectionErrorsCounter++;
         }
-        mainGUIForm.updateStatus("Время синхронизировано");
     }
 
     private void disconnectAndWaitForClickOnHoldConnectionCheckbox() {
@@ -226,6 +290,8 @@ class BORT_debug_manager implements ActionListener, DebugInformationListener {
 
     private void setTimeOnRTC() throws InterruptedException, TimeoutException {
         String currentTime = new SimpleDateFormat("HH:mm:ss").format(new Date());
+        // TODO: 20.10.2018 ПОСЛЕ ОБНОВЛЕНИЯ ПРОШИВКИ РАСКОММЕНТИРОВАТЬ!
+        //String currentTime = new SimpleDateFormat("dd-MM-yyyy;HH:mm:ss").format(new Date());
         mainGUIForm.updateStatus("Устанавливаем текущее время в RTC...");
         connection.send(CommandsConstList.CMD_SET + "32=" + currentTime);
         BORT_responseType waitingResponseTypes[] = {BORT_responseType.ERR_WRONG_PARAM_NAME, BORT_responseType.PARAM_RW_SUCCESS};
@@ -391,12 +457,14 @@ class BORT_debug_manager implements ActionListener, DebugInformationListener {
             }
         } catch (AlreadyExistsException ignored) {
         }
-        if (!allIsSuccessful && notifyIfNotSucessful) {
-            if (new AreYouSureDialogProcessor().showDialog("Возникли проблемы при чтении некоторых параметров. Вы хотите продолжить?") != ApiDialog.DialogResult.OK) {
+        if (!allIsSuccessful) {
+            if (notifyIfNotSucessful && new AreYouSureDialogProcessor().showDialog("Возникли проблемы при чтении некоторых параметров. Вы хотите продолжить?") != ApiDialog.DialogResult.OK) {
                 throw new InterruptedException("Ошибка: не удалось получить все параметры. Дальнейшие действия отменены.");
             }
+            mainGUIForm.updateErrorStatus("Ошибка: не удалось получить некоторые параметры.");
+        } else {
+            mainGUIForm.updateStatus("Все параметры были получены");
         }
-        mainGUIForm.updateStatus("Все параметры были получены");
         return readedParamsList;
     }
 
@@ -445,7 +513,65 @@ class BORT_debug_manager implements ActionListener, DebugInformationListener {
         //mainGUIForm.updateStatus("Запрашиваем статистику...");
         BORT_responseType waitingResponseTypes[] = {BORT_responseType.INFO_STATISTICS};
         BORT_response gettedResponse = waitForIncomingResponse(waitingResponseTypes, RESPONSE_WAIT_TIMEOUT);
+
+        updateDiagrammsInfo(gettedResponse);
         mainGUIForm.updateStatistics(gettedResponse.toString());
+    }
+
+    private void updateDiagrammsInfo(BORT_response gettedResponse) {
+        voltageDiagram.setRenderValuesAmount(mainGUIForm.getGraphSizeSlider().getValue());
+        RPM_diagram.setRenderValuesAmount(mainGUIForm.getGraphSizeSlider().getValue());
+        temperatureDiagram.setRenderValuesAmount(mainGUIForm.getGraphSizeSlider().getValue());
+        fuelLevelDiagram.setRenderValuesAmount(mainGUIForm.getGraphSizeSlider().getValue());
+        try {
+            voltageDiagram.getLines().get(CONST_DIAGRAM_LINE_VOLTAGE_MAIN).getValues().add(Double.valueOf(gettedResponse.getResponseParams().getFieldByKey(BORT_response.CONST_STATISTICS_VOLTAGE_MAIN).getValue()));
+            voltageDiagram.getLines().get(CONST_DIAGRAM_LINE_VOLTAGE_TEMPERATURE).getValues().add(Double.valueOf(gettedResponse.getResponseParams().getFieldByKey(BORT_response.CONST_STATISTICS_VOLTAGE_TEMPERATURE).getValue()));
+            voltageDiagram.getLines().get(CONST_DIAGRAM_LINE_VOLTAGE_FUEL).getValues().add(Double.valueOf(gettedResponse.getResponseParams().getFieldByKey(BORT_response.CONST_STATISTICS_VOLTAGE_FUEL).getValue()));
+
+            RPM_diagram.getLines().get(0).getValues().add(Double.valueOf(gettedResponse.getResponseParams().getFieldByKey(BORT_response.CONST_STATISTICS_RPM).getValue()));
+            temperatureDiagram.getLines().get(0).getValues().add(Double.valueOf(gettedResponse.getResponseParams().getFieldByKey(BORT_response.CONST_STATISTICS_ENGINE_TEMPERATURE).getValue()));
+            fuelLevelDiagram.getLines().get(0).getValues().add(Double.valueOf(gettedResponse.getResponseParams().getFieldByKey(BORT_response.CONST_STATISTICS_FUEL_LEVEL).getValue()));
+
+        } catch (NotFoundException e) {
+            mainGUIForm.updateErrorStatus("Ошибка во время обновления диаграммы: входные статистические данные некорректны.");
+        }
+        drawSelectedDiagram();
+    }
+
+    private void drawSelectedDiagram() {
+        switch (mainGUIForm.getSelectGraphComboBox().getSelectedIndex()) {
+            case MainGUIForm.CHOSEN_DIAGRAMM_TYPE_VOLTAGE:
+                voltageDiagram.setRedrawIfResized(true); // ←
+                RPM_diagram.setRedrawIfResized(false);
+                temperatureDiagram.setRedrawIfResized(false);
+                fuelLevelDiagram.setRedrawIfResized(false);
+
+                voltageDiagram.draw();
+                break;
+            case MainGUIForm.CHOSEN_DIAGRAMM_TYPE_RPM:
+                voltageDiagram.setRedrawIfResized(false);
+                RPM_diagram.setRedrawIfResized(true);// ←
+                temperatureDiagram.setRedrawIfResized(false);
+                fuelLevelDiagram.setRedrawIfResized(false);
+
+                RPM_diagram.draw();
+                break;
+            case MainGUIForm.CHOSEN_DIAGRAMM_TYPE_TEMPERATURE:
+                voltageDiagram.setRedrawIfResized(false);
+                RPM_diagram.setRedrawIfResized(false);
+                temperatureDiagram.setRedrawIfResized(true);// ←
+                fuelLevelDiagram.setRedrawIfResized(false);
+
+                temperatureDiagram.draw();
+                break;
+            case MainGUIForm.CHOSEN_DIAGRAMM_TYPE_FUEL_LEVEL:
+                voltageDiagram.setRedrawIfResized(false);
+                RPM_diagram.setRedrawIfResized(false);
+                temperatureDiagram.setRedrawIfResized(false);
+                fuelLevelDiagram.setRedrawIfResized(true);// ←
+
+                fuelLevelDiagram.draw();
+        }
     }
 
     /**
@@ -486,7 +612,7 @@ class BORT_debug_manager implements ActionListener, DebugInformationListener {
         BORT_connection BORT_connection = null;
         mainGUIForm.updateStatus("Поиск и подключение...");
         while (BORT_connection == null) {
-            if (SerialPortList.getPortNames().length > 0) {
+            if (SerialPortList.getPortNames().length > 0 && mainGUIForm.getHoldConnectionCheckBox().isSelected()) {
                 for (String selectedPort : SerialPortList.getPortNames()) {
                     long connection_startedTime = System.currentTimeMillis();
                     BORT_connection = new BORT_connection(selectedPort, this);
@@ -503,6 +629,7 @@ class BORT_debug_manager implements ActionListener, DebugInformationListener {
                     }
                 }
             }
+            delayMs(100);
         }
         return BORT_connection;
     }
@@ -527,12 +654,21 @@ class BORT_debug_manager implements ActionListener, DebugInformationListener {
      */
     @Override
     public void actionPerformed(ActionEvent actionEvent) {
-        this.actionEvent = actionEvent;
+        if (actionEvent.getSource() == mainGUIForm.getSelectGraphComboBox() || actionEvent.getActionCommand().equalsIgnoreCase("refresh diagram")) {
+            drawSelectedDiagram();
+        } else {
+            this.actionEvent = actionEvent;
+        }
     }
 
     @Override
-    public void debugInformationGetted(BORT_response response) {
+    public void debugInformationReceive(BORT_response response) {
         String currentTime = new SimpleDateFormat("HH:mm:ss").format(new Date());
         mainGUIForm.updateDebugStatusBar(currentTime + " | " + response.toString() + '\n');
+    }
+
+    @Override
+    public void errorMessageNotifyReceive(String message) {
+        mainGUIForm.updateErrorStatus(message);
     }
 }

@@ -88,7 +88,7 @@ public class BORT_connection implements SerialPortEventListener, Closeable {
                 }
             } catch (SerialPortException ignored) {
             } catch (InterpretationException e) {
-                System.err.println("Непредвиденная ошибка приёма данных: " + e);
+                debugInformationListener.errorMessageNotifyReceive("Ошибка приёма данных: " + e.getMessage());
             }
         }
     }
@@ -101,7 +101,7 @@ public class BORT_connection implements SerialPortEventListener, Closeable {
                 send(CommandsConstList.CMD_CONNECTION_APPROVED);
                 break;
             case DEBUG_INFORMATION:
-                debugInformationListener.debugInformationGetted(gettedResponse);
+                debugInformationListener.debugInformationReceive(gettedResponse);
                 break;
         }
         responsesStack.add(gettedResponse);
@@ -126,7 +126,7 @@ public class BORT_connection implements SerialPortEventListener, Closeable {
         try {
             serialPort.writeString(str + '\n');
         } catch (SerialPortException e) {
-            System.err.println("Ошибка отправки информации: " + e.getMessage());
+            debugInformationListener.errorMessageNotifyReceive("Ошибка отправки информации: " + e.getMessage());
         }
     }
 
