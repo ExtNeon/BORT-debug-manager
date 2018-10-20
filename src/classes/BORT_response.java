@@ -16,30 +16,30 @@ import java.util.ArrayList;
  * выраженной в форме объекта INISettingsSection
  */
 public class BORT_response {
-    private static final String STATISTICS_VOLTAGE_MAIN = "VM_L";
-    private static final String STATISTICS_VOLTAGE_TEMPERATURE = "VM_T";
-    private static final String STATISTICS_VOLTAGE_FUEL = "VM_F";
-    private static final String STATISTICS_RPM = "RPM";
-    private static final String STATISTICS_ACCESSORIES = "ACC";
-    private static final String STATISTICS_IGNITION = "IGN";
-    private static final String STATISTICS_PARKING_LIGHTS = "PLT";
-    private static final String STATISTICS_HANDBRAKE = "HB";
-    private static final String STATISTICS_TURNERS_SIGNAL = "TS";
-    private static final String STATISTICS_TIME = "TIME";
-    private static final String STATISTICS_I2C_ERRORS = "CER";
-    private static final String STATISTICS_CRANKSHAFT_TURNS = "MC";
-    private static final String STATISTICS_MASHINE_HOURS = "MHR";
-    private static final String STATISTICS_STATUSBAR_CAPTION = "SBC";
-    private static final String STATISTICS_FUEL_LEVEL = "FL";
-    private static final String STATISTICS_ENGINE_TEMPERATURE = "TP";
-    private static final String STATISTICS_TIME_FROM_STARTUP = "ST";
-    private static final String STATISTICS_ENGINE_STOP_TIME = "EST";
+    public static final String CONST_STATISTICS_VOLTAGE_MAIN = "VM_L";
+    public static final String CONST_STATISTICS_VOLTAGE_TEMPERATURE = "VM_T";
+    public static final String CONST_STATISTICS_VOLTAGE_FUEL = "VM_F";
+    public static final String CONST_STATISTICS_RPM = "RPM";
+    public static final String CONST_STATISTICS_FUEL_LEVEL = "FL";
+    public static final String CONST_STATISTICS_ENGINE_TEMPERATURE = "TP";
+    private static final String CONST_STATISTICS_ACCESSORIES = "ACC";
+    private static final String CONST_STATISTICS_IGNITION = "IGN";
+    private static final String CONST_STATISTICS_PARKING_LIGHTS = "PLT";
+    private static final String CONST_STATISTICS_HANDBRAKE = "HB";
+    private static final String CONST_STATISTICS_TURNERS_SIGNAL = "TS";
+    private static final String CONST_STATISTICS_TIME = "TIME";
+    private static final String CONST_STATISTICS_DISPLAY_I2C_ERRORS = "CER";
+    private static final String CONST_STATISTICS_CRANKSHAFT_TURNS = "MC";
+    private static final String CONST_STATISTICS_MASHINE_HOURS = "MHR";
+    private static final String CONST_STATISTICS_STATUSBAR_CAPTION = "SBC";
+    private static final String CONST_STATISTICS_TIME_FROM_STARTUP = "ST";
+    private static final String CONST_STATISTICS_ENGINE_STOP_TIME = "EST";
     private final INISettingsSection responseParams = new INISettingsSection("BORT_RESPONSE");
     private BORT_responseType responseType;
 
     BORT_response(String responseStr) throws InterpretationException {
         if (!responseStr.contains("!") || !responseStr.contains(":")) {
-            throw new InterpretationException("Input string aren't valid");
+            throw new InterpretationException("Input string aren't valid: doesn't contain delimiter or ANSW flag. Check connection with the module.");
         }
         int responseCode;
         try {
@@ -98,6 +98,7 @@ public class BORT_response {
 
     @Override
     public String toString() {
+        // TODO: 29.09.2018 Вынеси в константы
         switch (responseType) {
             case ECHO:
                 return "ECHO: " + responseParams;
@@ -141,63 +142,75 @@ public class BORT_response {
                 StringBuilder result = new StringBuilder();
                 try {
                     result.append("Напряжение в бортовой линии: ");
-                    result.append(responseParams.getFieldByKey(STATISTICS_VOLTAGE_MAIN).getValue());
+                    result.append(responseParams.getFieldByKey(CONST_STATISTICS_VOLTAGE_MAIN).getValue());
                     result.append(" вольт\n");
                     result.append("Напряжение на датчике температуры: ");
-                    result.append(responseParams.getFieldByKey(STATISTICS_VOLTAGE_TEMPERATURE).getValue());
+                    result.append(responseParams.getFieldByKey(CONST_STATISTICS_VOLTAGE_TEMPERATURE).getValue());
                     result.append(" вольт; Коэффициент уровня: ");
-                    result.append(roundTo((Double.valueOf(responseParams.getFieldByKey(STATISTICS_VOLTAGE_TEMPERATURE).getValue()) * 100) / Double.valueOf(responseParams.getFieldByKey(STATISTICS_VOLTAGE_MAIN).getValue()), 3));
+                    result.append(roundTo((Double.valueOf(responseParams.getFieldByKey(CONST_STATISTICS_VOLTAGE_TEMPERATURE).getValue()) * 100) / Double.valueOf(responseParams.getFieldByKey(CONST_STATISTICS_VOLTAGE_MAIN).getValue()), 3));
                     result.append('\n');
                     result.append("Напряжение на датчике уровня топлива: ");
-                    result.append(responseParams.getFieldByKey(STATISTICS_VOLTAGE_FUEL).getValue());
+                    result.append(responseParams.getFieldByKey(CONST_STATISTICS_VOLTAGE_FUEL).getValue());
                     result.append(" вольт; Коэффициент уровня: ");
-                    result.append(roundTo((Double.valueOf(responseParams.getFieldByKey(STATISTICS_VOLTAGE_FUEL).getValue()) * 100) / Double.valueOf(responseParams.getFieldByKey(STATISTICS_VOLTAGE_MAIN).getValue()), 3));
+                    result.append(roundTo((Double.valueOf(responseParams.getFieldByKey(CONST_STATISTICS_VOLTAGE_FUEL).getValue()) * 100) / Double.valueOf(responseParams.getFieldByKey(CONST_STATISTICS_VOLTAGE_MAIN).getValue()), 3));
                     result.append('\n');
                     result.append("Показания тахометра: ");
-                    result.append(responseParams.getFieldByKey(STATISTICS_RPM).getValue());
+                    result.append(responseParams.getFieldByKey(CONST_STATISTICS_RPM).getValue());
                     result.append(" об/мин\n");
                     result.append("Состояние линии аксессуаров: ");
-                    result.append(responseParams.getFieldByKey(STATISTICS_ACCESSORIES).getValue().equals("0") ? "выключено (OFF)" : "включено (ON)");
+                    result.append(responseParams.getFieldByKey(CONST_STATISTICS_ACCESSORIES).getValue().equals("0") ? "выключено (OFF)" : "включено (ON)");
                     result.append('\n');
                     result.append("Состояние линии зажигания: ");
-                    result.append(responseParams.getFieldByKey(STATISTICS_IGNITION).getValue().equals("0") ? "выключено (OFF)" : "включено (ON)");
+                    result.append(responseParams.getFieldByKey(CONST_STATISTICS_IGNITION).getValue().equals("0") ? "выключено (OFF)" : "включено (ON)");
                     result.append('\n');
                     result.append("Состояние линии габаритных огней: ");
-                    result.append(responseParams.getFieldByKey(STATISTICS_PARKING_LIGHTS).getValue().equals("0") ? "выключено (OFF)" : "включено (ON)");
+                    result.append(responseParams.getFieldByKey(CONST_STATISTICS_PARKING_LIGHTS).getValue().equals("0") ? "выключено (OFF)" : "включено (ON)");
                     result.append('\n');
                     result.append("Состояние линии ручника: ");
-                    result.append(responseParams.getFieldByKey(STATISTICS_HANDBRAKE).getValue().equals("0") ? "выключено (OFF)" : "включено (ON)");
+                    result.append(responseParams.getFieldByKey(CONST_STATISTICS_HANDBRAKE).getValue().equals("0") ? "выключено (OFF)" : "включено (ON)");
                     result.append('\n');
                     result.append("Состояние линии сигнала поворотников: ");
-                    result.append(responseParams.getFieldByKey(STATISTICS_TURNERS_SIGNAL).getValue().equals("0") ? "выключено (OFF)" : "включено (ON)");
+                    result.append(responseParams.getFieldByKey(CONST_STATISTICS_TURNERS_SIGNAL).getValue().equals("0") ? "выключено (OFF)" : "включено (ON)");
                     result.append('\n');
                     result.append("Время с RTC: ");
-                    result.append(responseParams.getFieldByKey(STATISTICS_TIME).getValue());
+                    try {
+                        if (responseParams.getFieldByKey(CONST_STATISTICS_TIME).getValue().charAt(0) == '!') {
+                            if (responseParams.getFieldByKey(CONST_STATISTICS_TIME).getValue().equalsIgnoreCase("!453:")) {
+                                result.append("время не установлено");
+                            } else {
+                                result.append("соединение с модулем отсутствует");
+                            }
+                        } else {
+                            result.append(responseParams.getFieldByKey(CONST_STATISTICS_TIME).getValue());
+                        }
+                    } catch (IndexOutOfBoundsException e) {
+                        throw new NotFoundException("RTC report is empty");
+                    }
                     result.append('\n');
-                    result.append("Количество ошибок связи по I2C: ");
-                    result.append(responseParams.getFieldByKey(STATISTICS_I2C_ERRORS).getValue());
+                    result.append("Количество непрерывных ошибок связи с дисплеем по I2C: ");
+                    result.append(responseParams.getFieldByKey(CONST_STATISTICS_DISPLAY_I2C_ERRORS).getValue());
                     result.append('\n');
                     result.append("Количество накопленных оборотов коленчатого вала: ");
-                    result.append(responseParams.getFieldByKey(STATISTICS_CRANKSHAFT_TURNS).getValue());
+                    result.append(responseParams.getFieldByKey(CONST_STATISTICS_CRANKSHAFT_TURNS).getValue());
                     result.append('\n');
                     result.append("Количество мото-часов: ");
-                    result.append(responseParams.getFieldByKey(STATISTICS_MASHINE_HOURS).getValue());
+                    result.append(responseParams.getFieldByKey(CONST_STATISTICS_MASHINE_HOURS).getValue());
                     result.append('\n');
                     result.append("Текущая надпись в строке статуса: ");
-                    result.append(responseParams.getFieldByKey(STATISTICS_STATUSBAR_CAPTION).getValue());
+                    result.append(responseParams.getFieldByKey(CONST_STATISTICS_STATUSBAR_CAPTION).getValue());
                     result.append('\n');
                     result.append("Уровень топлива: ");
-                    result.append(responseParams.getFieldByKey(STATISTICS_FUEL_LEVEL).getValue());
+                    result.append(responseParams.getFieldByKey(CONST_STATISTICS_FUEL_LEVEL).getValue());
                     result.append(" л.\n");
                     result.append("Температура двигателя: ");
-                    result.append(responseParams.getFieldByKey(STATISTICS_ENGINE_TEMPERATURE).getValue());
+                    result.append(responseParams.getFieldByKey(CONST_STATISTICS_ENGINE_TEMPERATURE).getValue());
                     result.append(" °C\n");
                     result.append("Время работы с момента включения: ");
-                    result.append(formatTime(Integer.valueOf(responseParams.getFieldByKey(STATISTICS_TIME_FROM_STARTUP).getValue())));
+                    result.append(formatTime(Integer.valueOf(responseParams.getFieldByKey(CONST_STATISTICS_TIME_FROM_STARTUP).getValue())));
                     result.append('\n');
-                    if (!responseParams.getFieldByKey(STATISTICS_ENGINE_STOP_TIME).getValue().equals("0")) {
+                    if (!responseParams.getFieldByKey(CONST_STATISTICS_ENGINE_STOP_TIME).getValue().equals("0")) {
                         result.append("Времени прошло с остановки двигателя: ");
-                        result.append(formatTime(Integer.valueOf(responseParams.getFieldByKey(STATISTICS_TIME_FROM_STARTUP).getValue()) - Integer.valueOf(responseParams.getFieldByKey(STATISTICS_ENGINE_STOP_TIME).getValue())));
+                        result.append(formatTime(Integer.valueOf(responseParams.getFieldByKey(CONST_STATISTICS_TIME_FROM_STARTUP).getValue()) - Integer.valueOf(responseParams.getFieldByKey(CONST_STATISTICS_ENGINE_STOP_TIME).getValue())));
                         result.append('\n');
                     }
                 } catch (NotFoundException e) {
@@ -211,7 +224,6 @@ public class BORT_response {
 
     private String formatTime(long millis) {
         int seconds = (int) millis / 1000;
-        // millis -= seconds * 1000;
         int minutes = seconds / 60;
         seconds -= minutes * 60;
         int hours = minutes / 60;
@@ -221,20 +233,8 @@ public class BORT_response {
         return (days > 0 ? days + " дн. " : "") + (hours > 0 ? hours + " час. " : "") + (minutes > 0 ? minutes + " мин. " : "") + seconds /*+ (false ? '.' + millis : "") */ + " сек.";
     }
 
-   /* private double trunc(double input, int digitsAfterPoint) {
-        long decimalMLT = (long) Math.pow(10, digitsAfterPoint);
-        long multipliedResult = (long) (decimalMLT * input);
-        return multipliedResult / (double) decimalMLT;
-    }*/
-
-    // TODO: 23.07.2018 Допили
     @SuppressWarnings("SameParameterValue")
     private double roundTo(double input, int digitsAfterPoint) {
-        /*int countOfDigits = 0;
-        double copyOfInput = input;
-        while ((copyOfInput /= 10.) > 0) {
-         countOfDigits++;
-        }*/
         long decimalMLT = (long) Math.pow(10, digitsAfterPoint);
         long multipliedResult = Math.round((decimalMLT * input));
         return multipliedResult / (double) decimalMLT;
